@@ -13,7 +13,7 @@ namespace Intelli.Kronos.Tasks
 
         public string ScheduleId { get; set; }
 
-        public NodeTask Task { get; set; }
+        public KronosTask Task { get; set; }
 
         public DateTime Timestamp { get; set; }
 
@@ -25,7 +25,7 @@ namespace Intelli.Kronos.Tasks
         {
         }
 
-        public FailedTask(NodeTask task, Exception ex)
+        public FailedTask(KronosTask task, Exception ex)
         {
             Task = task;
             ErrorMessage = ex.Message;

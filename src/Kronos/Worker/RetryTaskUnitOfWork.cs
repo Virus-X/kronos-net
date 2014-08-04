@@ -3,11 +3,13 @@ using System.Threading;
 using Intelli.Kronos.Processors;
 using Intelli.Kronos.Storage;
 using Intelli.Kronos.Tasks;
+using log4net;
 
 namespace Intelli.Kronos.Worker
 {
     public class RetryTaskUnitOfWork : IUnitOfWork
     {
+        private static readonly ILog Log = LogManager.GetLogger(typeof(ScheduledTaskUnitOfWork));
         public int Priority { get; private set; }
 
         private readonly IKronosTaskService kronosTaskService;
@@ -19,7 +21,7 @@ namespace Intelli.Kronos.Worker
 
         public RetryTaskUnitOfWork(
             TaskRetrySchedule schedule,
-            IKronosTaskService kronosTaskService,            
+            IKronosTaskService kronosTaskService,
             INodeTaskProcessorFactory processorFactory,
             IScheduledTasksStorage scheduledTasksStorage,
             IFailedTasksStorage failedTasksStorage)
@@ -41,15 +43,21 @@ namespace Intelli.Kronos.Worker
             }
             catch (Exception ex)
             {
+                Log.ErrorFormat("Task {0} crashed with exception: {1}", schedule.Id, ex);
                 failedTasksStorage.Add(new FailedTask(schedule, ex));
                 schedule.RetriesCount++;
 
                 if (schedule.CanRetryOnceMore())
                 {
                     schedule.Schedule = schedule.Schedule.GetNextSchedule();
+                    Log.DebugFormat("Task retry scheduled at {0}", schedule.Schedule.RunAt.ToLocalTime());
                     scheduledTasksStorage.Save(schedule);
                     scheduledTasksStorage.ReleaseLock(schedule);
                     return;
+                }
+                else
+                {
+                    Log.ErrorFormat("Task {0} failed too many times. Disabled", schedule.Id);
                 }
             }
 

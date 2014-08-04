@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Net;
 using Intelli.Kronos.Processors;
 using Intelli.Kronos.Tasks;
 
@@ -7,6 +6,8 @@ namespace Intelli.Kronos
 {
     public static class KronosConfig
     {
+        private static INodeTaskProcessorFactory _processorFactory;
+
         public static string TasksCollection = "Kronos.Tasks";
         public static string ScheduledTasksCollection = "Kronos.ScheduledTasks";
         public static string FailedTasksCollection = "Kronos.FailedTasks";
@@ -23,17 +24,23 @@ namespace Intelli.Kronos
         /// </summary>
         public static readonly Guid WorknodeId = Guid.NewGuid();
 
-        internal static readonly NodeTaskProcessorFactory ProcessorFactory = new NodeTaskProcessorFactory();        
-
-        public static void RegisterProcessor<T>(INodeTaskProcessor<T> processor)
-            where T : NodeTask
+        static KronosConfig()
         {
-            ProcessorFactory.RegisterProcessor<T>(processor);
+            _processorFactory = new NodeTaskProcessorFactory();
         }
 
-        public static void ClearProcessors()
+        public static INodeTaskProcessorFactory ProcessorFactory
         {
-            ProcessorFactory.ClearProcessors();
-        }        
+            get { return _processorFactory; }
+            set
+            {
+                if (value == null)
+                {
+                    throw new ArgumentNullException("value");
+                }
+
+                _processorFactory = value;
+            }
+        }
     }
 }

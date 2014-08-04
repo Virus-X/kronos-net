@@ -31,7 +31,7 @@ namespace Intelli.Kronos.Tasks
 
         private static TimeSpan Multiply(TimeSpan timeSpan, double multiplier)
         {
-            return TimeSpan.FromMinutes(timeSpan.TotalSeconds * multiplier);
+            return TimeSpan.FromSeconds(timeSpan.TotalSeconds * multiplier);
         }
     }
 }

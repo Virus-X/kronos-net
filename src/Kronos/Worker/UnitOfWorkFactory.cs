@@ -6,7 +6,7 @@ namespace Intelli.Kronos.Worker
 {
     public interface IUnitOfWorkFactory
     {
-        IUnitOfWork Create(NodeTask task);
+        IUnitOfWork Create(KronosTask task);
         IUnitOfWork Create(TaskSchedule schedule);
     }
 
@@ -44,7 +44,7 @@ namespace Intelli.Kronos.Worker
             this.taskProcessorFactory = taskProcessorFactory;
         }
 
-        public IUnitOfWork Create(NodeTask task)
+        public IUnitOfWork Create(KronosTask task)
         {
             return new SimpleTaskUnitOfWork(task, kronosTaskService, taskProcessorFactory, tasksStorage, scheduledTasksStorage, failedTasksStorage);
         }

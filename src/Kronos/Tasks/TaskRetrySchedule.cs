@@ -13,12 +13,12 @@ namespace Intelli.Kronos.Tasks
         {
         }
 
-        public TaskRetrySchedule(NodeTask task)
+        public TaskRetrySchedule(KronosTask task)
             : this(task, new ExponentialSchedule(TimeSpan.FromSeconds(1), 5))
         {
         }
 
-        public TaskRetrySchedule(NodeTask task, Schedule schedule)
+        public TaskRetrySchedule(KronosTask task, Schedule schedule)
         {
             Id = ObjectId.GenerateNewId().ToString();
             Task = task;

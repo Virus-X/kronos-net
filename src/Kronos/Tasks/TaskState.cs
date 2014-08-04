@@ -1,6 +1,6 @@
 namespace Intelli.Kronos.Tasks
 {
-    public enum NodeTaskState
+    public enum TaskState
     {
         None = 0,
         Pending = 1,

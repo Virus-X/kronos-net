@@ -9,7 +9,7 @@ namespace Intelli.Kronos.Tasks
 
         public string Id { get; set; }
 
-        public NodeTask Task { get; protected set; }
+        public KronosTask Task { get; protected set; }
 
         public WorkerLock Lock { get; private set; }
 
@@ -33,10 +33,11 @@ namespace Intelli.Kronos.Tasks
             Schedule = new OneTimeSchedule();
         }
 
-        public TaskSchedule(NodeTask task, Schedule schedule, string id = null)
+        public TaskSchedule(KronosTask task, Schedule schedule, string id = null)
         {
             Id = id ?? task.Id ?? ObjectId.GenerateNewId().ToString();
             Task = task;
+            Lock = WorkerLock.None;
             Schedule = schedule;
         }
 

@@ -50,7 +50,11 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="KronosHost.cs" />
+    <Compile Include="Processors\ContainerBasedProcessorFactory.cs" />
+    <Compile Include="Processors\TaskProcessorMap.cs" />
     <Compile Include="Storage\StorageFactory.cs" />
+    <Compile Include="Tasks\FailurePolicy.cs" />
+    <Compile Include="Tasks\TaskProcessorAttribute.cs" />
     <Compile Include="Worker\NodeWatchdog.cs" />
     <Compile Include="Storage\FailedTasksStorage.cs" />
     <Compile Include="Storage\NodeStateStorage.cs" />
@@ -60,8 +64,8 @@
     <Compile Include="Exceptions\ProcessorNotRegisteredException.cs" />
     <Compile Include="IKronosTaskService.cs" />
     <Compile Include="KronosConfig.cs" />
-    <Compile Include="Processors\INodeTaskProcessor.cs" />
-    <Compile Include="Processors\NodeTaskProcessor.cs" />
+    <Compile Include="Processors\IKronosTaskProcessor.cs" />
+    <Compile Include="Processors\KronosTaskProcessor.cs" />
     <Compile Include="Processors\NodeTaskProcessorFactory.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Tasks\ExponentialSchedule.cs" />
@@ -73,9 +77,9 @@
     <Compile Include="Worker\RetryTaskUnitOfWork.cs" />
     <Compile Include="Worker\WorkQueueProvider.cs" />
     <Compile Include="KronosTaskService.cs" />
-    <Compile Include="Tasks\NodeTask.cs" />
+    <Compile Include="Tasks\KronosTask.cs" />
     <Compile Include="Tasks\FailedTask.cs" />
-    <Compile Include="Tasks\NodeTaskState.cs" />
+    <Compile Include="Tasks\TaskState.cs" />
     <Compile Include="Tasks\Schedule.cs" />
     <Compile Include="Tasks\TaskSchedule.cs" />
     <Compile Include="Tasks\TaskPriority.cs" />

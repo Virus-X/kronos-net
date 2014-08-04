@@ -10,7 +10,7 @@ namespace Intelli.Kronos
         /// </summary>
         /// <param name="task">Task to add</param>
         /// <returns>Id of added task</returns>
-        string AddTask(NodeTask task);
+        string AddTask(KronosTask task);
 
         /// <summary>
         /// Schedules to run the task at specified time.        
@@ -18,7 +18,7 @@ namespace Intelli.Kronos
         /// <param name="task">Task to schedule</param>
         /// <param name="startAt">Time to start scheduled task at.</param>
         /// <returns>Id of task schedule</returns>
-        string ScheduleTask(NodeTask task, DateTime startAt);
+        string ScheduleTask(KronosTask task, DateTime startAt);
 
         /// <summary>
         /// Schedules to run the task periodically, starting from specified time.        
@@ -28,7 +28,7 @@ namespace Intelli.Kronos
         /// <param name="interval">Interval between instances of scheduled task. Cannot be less than 5 seconds.</param>
         /// <param name="scheduleId">Optional id for task schedule. It would be assigned to this schedule and override any existing schedule with same id.</param>
         /// <returns>Id of task schedule</returns>
-        string ScheduleTask(NodeTask task, DateTime startAt, TimeSpan interval, string scheduleId = null);
+        string ScheduleTask(KronosTask task, DateTime startAt, TimeSpan interval, string scheduleId = null);
 
         /// <summary>
         /// Removed task from worker queue.

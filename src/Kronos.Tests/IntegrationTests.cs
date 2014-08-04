@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Configuration;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using FluentAssertions;
 using Intelli.Kronos;
@@ -11,6 +8,7 @@ using Intelli.Kronos.Storage;
 using Intelli.Kronos.Tasks;
 using MongoDB.Driver;
 using NUnit.Framework;
+using log4net.Config;
 
 namespace Kronos.Tests
 {
@@ -21,11 +19,16 @@ namespace Kronos.Tests
         private IKronosHost host;
         private IKronosTaskService taskService;
 
+        [TestFixtureSetUp]
+        public void SetUpFixture()
+        {
+            BasicConfigurator.Configure();
+        }
+
         [SetUp]
         public void SetUp()
         {
-            KronosConfig.ClearProcessors();
-            KronosConfig.RegisterProcessor(new StubTaskProcessor());
+
             var mongoUri = ConfigurationManager.ConnectionStrings["MongoDB"].ConnectionString;
             var mongoClient = new MongoClient(mongoUri);
             var db = mongoClient.GetServer().GetDatabase(new MongoUrl(mongoUri).DatabaseName);
@@ -45,29 +48,40 @@ namespace Kronos.Tests
         {
             host.Stop();
         }
-        
+
 
         [Test]
         public void RunStubTasks()
         {
-            host.Start();            
+            host.Start();
             taskService.AddTask(new StubTask());
             processedEvent.WaitOne(200000).Should().BeTrue();
-        }        
-
-        private class StubTask : NodeTask
-        {            
-            public void PulseEvent()
-            {
-                IntegrationTests.processedEvent.Set();
-            }
         }
 
-        private class StubTaskProcessor : NodeTaskProcessor<StubTask>
+        [Test]
+        public void SimulateTaskException()
         {
-            public override void Process(StubTask task, IKronosTaskService kronosTaskService, CancellationToken token)
+            host.Start();
+            taskService.AddTask(new StubTask { SimulateCrash = true });
+            processedEvent.WaitOne(200000).Should().BeTrue();
+        }
+
+        [TaskProcessor(typeof(StubTaskProcessor))]
+        private class StubTask : KronosTask
+        {
+            public bool SimulateCrash { get; set; }
+        }
+
+        private class StubTaskProcessor : KronosTaskProcessor<StubTask>
+        {
+            public override void Process(StubTask task, IKronosTaskService taskService, CancellationToken token)
             {
-                task.PulseEvent();                
+                if (task.SimulateCrash)
+                {
+                    throw new InvalidOperationException("oops");
+                }
+
+                processedEvent.Set();
             }
         }
     }

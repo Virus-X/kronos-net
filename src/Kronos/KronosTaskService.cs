@@ -1,6 +1,7 @@
 ﻿using System;
 using Intelli.Kronos.Storage;
 using Intelli.Kronos.Tasks;
+using MongoDB.Driver;
 
 namespace Intelli.Kronos
 {
@@ -9,26 +10,31 @@ namespace Intelli.Kronos
         private readonly ITasksStorage tasksStorage;
         private readonly IScheduledTasksStorage scheduledTasksStorage;
 
+        public KronosTaskService(MongoDatabase db)
+            : this(new StorageFactory(db))
+        {
+        }
+
         public KronosTaskService(IStorageFactory storageFactory)
         {
             tasksStorage = storageFactory.GetTasksStorage();
             scheduledTasksStorage = storageFactory.GetScheduledTasksStorage();
-        }        
+        }
 
-        public string AddTask(NodeTask task)
+        public string AddTask(KronosTask task)
         {
             task.Id = null;
             task.ResetState();
             return tasksStorage.Add(task);
         }
 
-        public string ScheduleTask(NodeTask task, DateTime startAt)
+        public string ScheduleTask(KronosTask task, DateTime startAt)
         {
             var scheduledTask = new TaskSchedule(task, new OneTimeSchedule(startAt));
             return scheduledTasksStorage.Save(scheduledTask);
         }
 
-        public string ScheduleTask(NodeTask task, DateTime startAt, TimeSpan interval, string scheduleId = null)
+        public string ScheduleTask(KronosTask task, DateTime startAt, TimeSpan interval, string scheduleId = null)
         {
             var scheduledTask = new TaskSchedule(task, new RecurrentSchedule(startAt, interval), scheduleId);
             return scheduledTasksStorage.Save(scheduledTask);
@@ -36,7 +42,7 @@ namespace Intelli.Kronos
 
         public void RemoveTask(string taskId)
         {
-            tasksStorage.SetState(taskId, NodeTaskState.Canceled);
+            tasksStorage.SetState(taskId, TaskState.Canceled);
         }
 
         public void UnscheduleTask(string scheduleId)

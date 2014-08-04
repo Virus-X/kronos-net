@@ -1,43 +1,72 @@
 using System;
 using System.Collections.Generic;
-using Intelli.Kronos.Exceptions;
+using System.Linq;
 using Intelli.Kronos.Tasks;
 
 namespace Intelli.Kronos.Processors
 {
     public interface INodeTaskProcessorFactory
     {
-        INodeTaskProcessor GetProcessorFor(NodeTask task);
+        IKronosTaskProcessor GetProcessorFor(KronosTask task);
     }
 
-    public class NodeTaskProcessorFactory : INodeTaskProcessorFactory
+    public class NodeTaskProcessorFactory : INodeTaskProcessorFactory, IDisposable
     {
-        private readonly Dictionary<Type, INodeTaskProcessor> processors;
+        protected Dictionary<Type, IKronosTaskProcessor> TaskProcessors { get; private set; }
 
         public NodeTaskProcessorFactory()
         {
-            processors = new Dictionary<Type, INodeTaskProcessor>();
+            TaskProcessors = new Dictionary<Type, IKronosTaskProcessor>();
         }
 
-        public INodeTaskProcessor GetProcessorFor(NodeTask task)
+        public virtual IKronosTaskProcessor GetProcessorFor(KronosTask task)
         {
             var taskType = task.GetType();
-            if (!processors.ContainsKey(taskType))
+
+            IKronosTaskProcessor processor;
+            if (TaskProcessors.TryGetValue(taskType, out processor))
             {
-                throw new ProcessorNotRegisteredException(taskType);
+                return processor;
             }
 
-            return processors[taskType];
+            var processorType = TaskProcessorMap.Get(taskType);
+            processor = GetProcessor(processorType);
+            TaskProcessors[taskType] = processor;
+
+            return processor;
         }
 
-        protected internal void RegisterProcessor<T>(INodeTaskProcessor processor)
+        public void Dispose()
         {
-            processors[typeof(T)] = processor;
+            ClearProcessors();
         }
 
-        protected internal void ClearProcessors()
+        protected virtual object CreateProcessor(Type processorType)
         {
-            processors.Clear();           
+            return Activator.CreateInstance(processorType);
+        }
+
+        private IKronosTaskProcessor GetProcessor(Type processorType)
+        {
+            IKronosTaskProcessor instance;
+            if (!TaskProcessors.TryGetValue(processorType, out instance))
+            {
+                instance = (IKronosTaskProcessor)CreateProcessor(processorType);
+                TaskProcessors[processorType] = instance;
+            }
+
+            return instance;
+        }
+
+        private void ClearProcessors()
+        {
+            var processors = TaskProcessors.Values.ToList();
+            TaskProcessors.Clear();
+
+            foreach (var instance in processors)
+            {
+                instance.Dispose();
+            }
         }
     }
 }

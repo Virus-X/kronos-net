@@ -14,6 +14,9 @@ namespace Intelli.Kronos.Worker
         IUnitOfWork GetNextTask(CancellationToken token);
     }
 
+    /// <summary>
+    /// 
+    /// </summary>
     public class WorkQueueProvider : IWorkQueueProvider
     {
         private static readonly ILog Log = LogManager.GetLogger(typeof(WorkQueueProvider));
@@ -104,16 +107,24 @@ namespace Intelli.Kronos.Worker
         private void LoaderLoop(object arg)
         {
             var token = (CancellationToken)arg;
+            bool semaphoreTaken = false;
             while (true)
             {
                 try
                 {
                     token.ThrowIfCancellationRequested();
-                    queueSemaphore.Wait();
+                    if (!semaphoreTaken)
+                    {
+                        queueSemaphore.Wait();
+                        semaphoreTaken = true;
+                    }
+
+
                     var schedule = scheduledTasksStorage.AllocateNext(worknodeId);
                     if (schedule != null)
                     {
                         AddToQueue(unitOfWorkFactory.Create(schedule));
+                        semaphoreTaken = false;
                         continue;
                     }
 
@@ -121,6 +132,7 @@ namespace Intelli.Kronos.Worker
                     if (task != null)
                     {
                         AddToQueue(unitOfWorkFactory.Create(task));
+                        semaphoreTaken = false;
                         continue;
                     }
 

@@ -4,7 +4,7 @@ using MongoDB.Bson.Serialization.Attributes;
 
 namespace Intelli.Kronos.Tasks
 {
-    public abstract class NodeTask
+    public abstract class KronosTask
     {
         private const int MaxRetryCount = 5;
 
@@ -13,21 +13,25 @@ namespace Intelli.Kronos.Tasks
 
         public TaskPriority Priority { get; set; }
 
+        public FailurePolicy FailurePolicy { get; set; }
+
         public DateTime DateCreated { get; private set; }
 
-        public NodeTaskState State { get; private set; }
+        public TaskState State { get; private set; }
 
-        public WorkerLock Lock { get; private set; }                
+        public WorkerLock Lock { get; private set; }
 
-        protected NodeTask()
+        protected KronosTask()
         {
             DateCreated = DateTime.UtcNow;
             Priority = TaskPriority.Default;
+            Lock = WorkerLock.None;
+            FailurePolicy = FailurePolicy.Default;
         }
 
         internal void ResetState()
         {
-            State = NodeTaskState.Pending;
+            State = TaskState.Pending;
             Lock = WorkerLock.None;
         }
     }

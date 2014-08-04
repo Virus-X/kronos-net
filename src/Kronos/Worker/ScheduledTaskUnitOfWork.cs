@@ -3,11 +3,14 @@ using System.Threading;
 using Intelli.Kronos.Processors;
 using Intelli.Kronos.Storage;
 using Intelli.Kronos.Tasks;
+using log4net;
 
 namespace Intelli.Kronos.Worker
 {
     public class ScheduledTaskUnitOfWork : IUnitOfWork
     {
+        private static readonly ILog Log = LogManager.GetLogger(typeof(ScheduledTaskUnitOfWork));
+
         private readonly TaskSchedule schedule;
         private readonly IKronosTaskService kronosTaskService;
         private readonly INodeTaskProcessorFactory processorFactory;
@@ -40,9 +43,15 @@ namespace Intelli.Kronos.Worker
             }
             catch (Exception ex)
             {
+                Log.ErrorFormat("Task {0} crashed with exception: {1}", schedule.Id, ex);
                 failedTasksStorage.Add(new FailedTask(schedule, ex));
-                var retrySchedule = new TaskRetrySchedule(schedule.Task);
-                scheduledTasksStorage.Save(retrySchedule);
+
+                if (schedule.Task.FailurePolicy == FailurePolicy.ExponentialRetry)
+                {
+                    Log.Debug("Task scheduled for retry");
+                    var retrySchedule = new TaskRetrySchedule(schedule.Task);
+                    scheduledTasksStorage.Save(retrySchedule);
+                }
             }
             finally
             {
