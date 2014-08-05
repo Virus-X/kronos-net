@@ -64,7 +64,7 @@ namespace Intelli.Kronos.Worker
 
         public void Release()
         {
-            taskStorage.ReleaseLock(task.Id);
+            taskStorage.ReleaseLock(task);
         }
     }
 }

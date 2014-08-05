@@ -1,7 +1,11 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using Intelli.Kronos.Tasks;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using MongoDB.Driver.Builders;
+using log4net;
 
 namespace Intelli.Kronos.Storage
 {
@@ -22,12 +26,16 @@ namespace Intelli.Kronos.Storage
 
     public class ScheduledTasksStorage : IScheduledTasksStorage
     {
+        private static readonly ILog Log = LogManager.GetLogger(typeof(ScheduledTasksStorage));
+
         private readonly MongoCollection<TaskSchedule> taskCollection;
+        private readonly HashSet<string> unknownTypes;
 
         public ScheduledTasksStorage(MongoDatabase db)
         {
             taskCollection = db.GetCollection<TaskSchedule>(KronosConfig.ScheduledTasksCollection);
             taskCollection.CreateIndex(IndexKeys<TaskSchedule>.Ascending(x => x.Schedule.RunAt));
+            unknownTypes = new HashSet<string>();
         }
 
         public string Save(TaskSchedule taskSchedule)
@@ -42,24 +50,41 @@ namespace Intelli.Kronos.Storage
                 Query<TaskSchedule>.EQ(x => x.Lock.NodeId, Guid.Empty),
                 Query<TaskSchedule>.LTE(x => x.Schedule.RunAt, DateTime.UtcNow));
 
+            if (unknownTypes.Count > 0)
+            {
+                // Ensuring that we won't receive unknown tasks for this node.
+                // Performance drops here, so generally, user should ensure that all tasks would be known to node.
+                q = Query.And(q, Query.NotIn("Task._t", unknownTypes.Select(BsonValue.Create)));
+            }
+
             var upd = Update<TaskSchedule>.Set(x => x.Lock, WorkerLock.Create(worknodeId));
 
-            var task = taskCollection.FindAndModify(new FindAndModifyArgs
+            var res = taskCollection.FindAndModify(new FindAndModifyArgs
+                                                       {
+                                                           Query = q,
+                                                           Update = upd,
+                                                           SortBy = SortBy<TaskSchedule>.Ascending(x => x.Schedule.RunAt),
+                                                           VersionReturned = FindAndModifyDocumentVersion.Modified
+                                                       });
+            try
             {
-                Query = q,
-                Update = upd,
-                SortBy = SortBy<TaskSchedule>.Descending(x => x.Schedule.RunAt),
-                VersionReturned = FindAndModifyDocumentVersion.Modified
-            }).GetModifiedDocumentAs<TaskSchedule>();
-
-            return task;
+                var task = res.GetModifiedDocumentAs<TaskSchedule>();
+                return task;
+            }
+            catch (Exception ex)
+            {
+                var taskId = res.ModifiedDocument.GetValue("_id").AsString;
+                Log.ErrorFormat("Failed to deserialize the task {0}: {1}", taskId, ex.Message);
+                var taskType = res.ModifiedDocument.GetValue("Task").AsBsonDocument.GetValue("_t").AsString;
+                unknownTypes.Add(taskType);
+                ReleaseLock(taskId);
+                return null;
+            }
         }
 
         public void ReleaseLock(TaskSchedule taskSchedule)
         {
-            var q = Query.And(Query<TaskSchedule>.EQ(x => x.Id, taskSchedule.Id));
-            var upd = Update<TaskSchedule>.Set(x => x.Lock, WorkerLock.None);
-            taskCollection.Update(q, upd);
+            ReleaseLock(taskSchedule.Id);
         }
 
         public int ReleaseAllTasks(Guid worknodeId)
@@ -91,6 +116,13 @@ namespace Intelli.Kronos.Storage
                     .Set(x => x.Schedule, newSchedule);
                 taskCollection.Update(q, upd);
             }
+        }
+
+        private void ReleaseLock(string taskId)
+        {
+            var q = Query.And(Query<TaskSchedule>.EQ(x => x.Id, taskId));
+            var upd = Update<TaskSchedule>.Set(x => x.Lock, WorkerLock.None);
+            taskCollection.Update(q, upd);
         }
     }
 }
