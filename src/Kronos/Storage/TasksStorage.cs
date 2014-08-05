@@ -25,6 +25,7 @@ namespace Intelli.Kronos.Storage
         public TasksStorage(MongoDatabase db)
         {
             tasksCollection = db.GetCollection<KronosTask>(KronosConfig.TasksCollection);
+            tasksCollection.CreateIndex(IndexKeys<KronosTask>.Ascending(x => x.Priority));
         }
 
         public string Add(KronosTask task)

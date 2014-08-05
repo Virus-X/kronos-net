@@ -27,6 +27,7 @@ namespace Intelli.Kronos.Storage
         public ScheduledTasksStorage(MongoDatabase db)
         {
             taskCollection = db.GetCollection<TaskSchedule>(KronosConfig.ScheduledTasksCollection);
+            taskCollection.CreateIndex(IndexKeys<TaskSchedule>.Ascending(x => x.Schedule.RunAt));
         }
 
         public string Save(TaskSchedule taskSchedule)
