@@ -92,7 +92,9 @@
     <Compile Include="Worker\SimpleTaskUnitOfWork.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Kronos.nuspec" />
     <None Include="packages.config" />
+    <None Include="PublishPackage.bat" />
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
