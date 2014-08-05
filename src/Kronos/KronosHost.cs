@@ -27,6 +27,7 @@ namespace Intelli.Kronos
 
         public KronosHost(MongoDatabase db, int workerCount)
         {
+            MongoConfigurator.Configure();
             var worknodeId = KronosConfig.WorknodeId;
             var storageFactory = new StorageFactory(db);
 

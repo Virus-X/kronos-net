@@ -52,6 +52,7 @@
     <Compile Include="KronosHost.cs" />
     <Compile Include="Processors\ContainerBasedProcessorFactory.cs" />
     <Compile Include="Processors\TaskProcessorMap.cs" />
+    <Compile Include="Storage\MongoConfigurator.cs" />
     <Compile Include="Storage\StorageFactory.cs" />
     <Compile Include="Tasks\FailurePolicy.cs" />
     <Compile Include="Tasks\TaskProcessorAttribute.cs" />
