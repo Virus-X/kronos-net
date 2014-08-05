@@ -20,6 +20,8 @@ namespace Intelli.Kronos.Storage
         int ReleaseAllTasks(Guid worknodeId);
 
         void SetState(string taskId, TaskState newState);
+        int RemapDiscriminator(string oldDiscriminator, string newDiscriminator);
+        int CancelAllByDiscriminator(string discriminator);
     }
 
     public class TasksStorage : ITasksStorage
@@ -83,7 +85,7 @@ namespace Intelli.Kronos.Storage
         public void ReleaseLock(KronosTask task)
         {
             ReleaseLock(task.Id);
-        }        
+        }
 
         public int ReleaseAllTasks(Guid worknodeId)
         {
@@ -101,6 +103,28 @@ namespace Intelli.Kronos.Storage
             var q = Query<KronosTask>.EQ(x => x.Id, taskId);
             var upd = Update<KronosTask>.Set(x => x.State, newState);
             tasksCollection.Update(q, upd, WriteConcern.Acknowledged);
+        }
+
+        public int RemapDiscriminator(string oldDiscriminator, string newDiscriminator)
+        {
+            var q = Query.And(Query<KronosTask>.EQ(x => x.Lock.NodeId, Guid.Empty),
+                              Query<KronosTask>.NE(x => x.State, TaskState.Pending),
+                              Query.EQ("_t", oldDiscriminator));
+
+            var upd = Update.Set("_t", newDiscriminator);
+            var options = new MongoUpdateOptions { Flags = UpdateFlags.Multi, WriteConcern = WriteConcern.Acknowledged };
+            return (int)tasksCollection.Update(q, upd, options).DocumentsAffected;
+        }
+
+        public int CancelAllByDiscriminator(string discriminator)
+        {
+            var q = Query.And(Query<KronosTask>.EQ(x => x.Lock.NodeId, Guid.Empty),
+                              Query<KronosTask>.NE(x => x.State, TaskState.Pending),
+                              Query.EQ("_t", discriminator));
+
+            var upd = Update<KronosTask>.Set(x => x.State, TaskState.Canceled);
+            var options = new MongoUpdateOptions { Flags = UpdateFlags.Multi, WriteConcern = WriteConcern.Acknowledged };
+            return (int)tasksCollection.Update(q, upd, options).DocumentsAffected;
         }
 
         private void ReleaseLock(string taskId)

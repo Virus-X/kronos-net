@@ -40,7 +40,7 @@ namespace Intelli.Kronos
             return scheduledTasksStorage.Save(scheduledTask);
         }
 
-        public void RemoveTask(string taskId)
+        public void CancelTask(string taskId)
         {
             tasksStorage.SetState(taskId, TaskState.Canceled);
         }
@@ -48,6 +48,20 @@ namespace Intelli.Kronos
         public void UnscheduleTask(string scheduleId)
         {
             scheduledTasksStorage.Remove(scheduleId);
+        }
+
+        public int RemapTaskDiscriminator(string oldDiscriminator, string newDiscriminator)
+        {
+            var count = tasksStorage.RemapDiscriminator(oldDiscriminator, newDiscriminator);
+            count += scheduledTasksStorage.RemapDiscriminator(oldDiscriminator, newDiscriminator);
+            return count;
+        }
+
+        public int CancelAllByDiscriminator(string discriminator)
+        {
+            var count = tasksStorage.CancelAllByDiscriminator(discriminator);
+            count += scheduledTasksStorage.CancelAllByDiscriminator(discriminator);
+            return count;
         }
     }
 }

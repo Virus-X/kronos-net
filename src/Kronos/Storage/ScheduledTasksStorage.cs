@@ -22,6 +22,8 @@ namespace Intelli.Kronos.Storage
         void Reschedule(TaskSchedule taskSchedule, Schedule newSchedule);
 
         void Remove(string scheduleId);
+        int RemapDiscriminator(string oldDiscriminator, string newDiscriminator);
+        int CancelAllByDiscriminator(string discriminator);
     }
 
     public class ScheduledTasksStorage : IScheduledTasksStorage
@@ -116,6 +118,24 @@ namespace Intelli.Kronos.Storage
                     .Set(x => x.Schedule, newSchedule);
                 taskCollection.Update(q, upd);
             }
+        }
+
+        public int RemapDiscriminator(string oldDiscriminator, string newDiscriminator)
+        {
+            var q = Query.And(Query<TaskSchedule>.EQ(x => x.Lock.NodeId, Guid.Empty),
+                              Query.EQ("Task._t", oldDiscriminator));
+
+            var upd = Update.Set("Task._t", newDiscriminator);
+            var options = new MongoUpdateOptions { Flags = UpdateFlags.Multi, WriteConcern = WriteConcern.Acknowledged };
+            return (int)taskCollection.Update(q, upd, options).DocumentsAffected;
+        }
+
+        public int CancelAllByDiscriminator(string discriminator)
+        {
+            var q = Query.And(Query<TaskSchedule>.EQ(x => x.Lock.NodeId, Guid.Empty),
+                              Query.EQ("_t", discriminator));
+
+            return (int)taskCollection.Remove(q, RemoveFlags.None, WriteConcern.Acknowledged).DocumentsAffected;
         }
 
         private void ReleaseLock(string taskId)

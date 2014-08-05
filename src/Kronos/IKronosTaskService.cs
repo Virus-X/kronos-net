@@ -31,12 +31,12 @@ namespace Intelli.Kronos
         string ScheduleTask(KronosTask task, DateTime startAt, TimeSpan interval, string scheduleId = null);
 
         /// <summary>
-        /// Removed task from worker queue.
-        /// Task can only be removed if it didn't start execution.
+        /// Cancels specified task.
+        /// Task can only be cancelled if it didn't start execution.
         /// </summary>
         /// <param name="taskId">Id of a task to remove</param>
-        /// <returns>True if task was removed, false if it was already locked for execution or processed</returns>
-        void RemoveTask(string taskId);
+        /// <returns>True if task was removed, false if it was not found or already locked for execution</returns>
+        void CancelTask(string taskId);
 
         /// <summary>
         /// Cancels schedule for a task.
@@ -44,5 +44,21 @@ namespace Intelli.Kronos
         /// <param name="scheduleId">Id of schedule to cancel</param>
         /// <returns>True if schedule was canceled, false if no schedule with specified id found.</returns>
         void UnscheduleTask(string scheduleId);
+
+        /// <summary>
+        /// Updates discriminator (_t value in MongoDb) for all tasks that have matching old one.
+        /// Useful during deploys.
+        /// </summary>
+        /// <param name="oldDiscriminator">Old discriminator to update</param>
+        /// <param name="newDiscriminator">New value of discriminator</param>
+        /// <returns>Count of tasks processed</returns>
+        int RemapTaskDiscriminator(string oldDiscriminator, string newDiscriminator);
+
+        /// <summary>
+        /// Cancels all tasks with specified discriminator (_t value in MongoDb).
+        /// </summary>
+        /// <param name="discriminator">Task discriminator</param>        
+        /// <returns>Count of tasks processed</returns>
+        int CancelAllByDiscriminator(string discriminator);
     }
 }
