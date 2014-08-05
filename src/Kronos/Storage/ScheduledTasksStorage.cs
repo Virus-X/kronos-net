@@ -24,6 +24,7 @@ namespace Intelli.Kronos.Storage
         void Remove(string scheduleId);
         int RemapDiscriminator(string oldDiscriminator, string newDiscriminator);
         int CancelAllByDiscriminator(string discriminator);
+        TaskSchedule GetById(string scheduleId);
     }
 
     public class ScheduledTasksStorage : IScheduledTasksStorage
@@ -38,6 +39,12 @@ namespace Intelli.Kronos.Storage
             taskCollection = db.GetCollection<TaskSchedule>(KronosConfig.ScheduledTasksCollection);
             taskCollection.CreateIndex(IndexKeys<TaskSchedule>.Ascending(x => x.Schedule.RunAt));
             unknownTypes = new HashSet<string>();
+        }
+
+        public TaskSchedule GetById(string scheduleId)
+        {
+            var q = Query<TaskSchedule>.EQ(x => x.Id, scheduleId);
+            return taskCollection.Find(q).FirstOrDefault();
         }
 
         public string Save(TaskSchedule taskSchedule)

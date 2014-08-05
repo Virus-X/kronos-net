@@ -46,6 +46,7 @@ namespace Intelli.Kronos.Worker
             {
                 processor.Process(task, kronosTaskService, token);
                 taskStorage.SetState(task.Id, TaskState.Completed);
+                Log.DebugFormat("Task {0} processed", task.Id);
             }
             catch (Exception ex)
             {
@@ -58,7 +59,7 @@ namespace Intelli.Kronos.Worker
                     Log.Debug("Task scheduled for retry");
                     var retrySchedule = new TaskRetrySchedule(task);
                     scheduledTasksStorage.Save(retrySchedule);
-                }                
+                }
             }
         }
 

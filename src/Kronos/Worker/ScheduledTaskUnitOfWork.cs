@@ -40,6 +40,7 @@ namespace Intelli.Kronos.Worker
             {
                 var processor = processorFactory.GetProcessorFor(schedule.Task);
                 processor.Process(schedule.Task, kronosTaskService, token);
+                Log.DebugFormat("Schedule {0} processed", schedule.Id);
             }
             catch (Exception ex)
             {

@@ -60,5 +60,15 @@ namespace Intelli.Kronos
         /// <param name="discriminator">Task discriminator</param>        
         /// <returns>Count of tasks processed</returns>
         int CancelAllByDiscriminator(string discriminator);
+
+        /// <summary>
+        /// Checks whether task with specified id exists and ensures that it has specified schedule.
+        /// Creates new task schedule otherwise.
+        /// </summary>
+        /// <param name="scheduleId">Id of scheduled task</param>
+        /// <param name="taskFactory">Factory method, that creates task if it not exists.</param>
+        /// <param name="startAt">Time to start task at.</param>
+        /// <param name="interval">Interval between instances of scheduled task.</param>
+        void EnsureTaskScheduled(string scheduleId, Func<KronosTask> taskFactory, DateTime startAt, TimeSpan interval);
     }
 }

@@ -34,6 +34,19 @@ namespace Intelli.Kronos
             return scheduledTasksStorage.Save(scheduledTask);
         }
 
+        public void EnsureTaskScheduled(string scheduleId, Func<KronosTask> taskGenerator, DateTime startAt, TimeSpan interval)
+        {
+            var scheduledTask = scheduledTasksStorage.GetById(scheduleId);
+            if (scheduledTask == null)
+            {
+                ScheduleTask(taskGenerator(), startAt, interval, scheduleId);
+            }
+            else
+            {
+                scheduledTasksStorage.Reschedule(scheduledTask, new RecurrentSchedule(startAt, interval));
+            }
+        }
+
         public string ScheduleTask(KronosTask task, DateTime startAt, TimeSpan interval, string scheduleId = null)
         {
             var scheduledTask = new TaskSchedule(task, new RecurrentSchedule(startAt, interval), scheduleId);
