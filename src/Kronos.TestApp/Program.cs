@@ -2,6 +2,7 @@
 using System.Configuration;
 using Intelli.Kronos;
 using MongoDB.Driver;
+using log4net.Config;
 
 namespace Kronos.TestApp
 {
@@ -9,6 +10,7 @@ namespace Kronos.TestApp
     {
         public static void Main(string[] args)
         {
+            BasicConfigurator.Configure();
             var mongoUri = ConfigurationManager.ConnectionStrings["MongoDB"].ConnectionString;
             var mongoClient = new MongoClient(mongoUri);
             var db = mongoClient.GetServer().GetDatabase(new MongoUrl(mongoUri).DatabaseName);
