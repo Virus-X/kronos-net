@@ -23,7 +23,7 @@ namespace Intelli.Kronos.Storage
             {
                 foreach (Type t in a.GetTypes())
                 {
-                    if (task.IsAssignableFrom(t) && schedule.IsAssignableFrom(t))
+                    if (task.IsAssignableFrom(t) || schedule.IsAssignableFrom(t))
                     {
                         BsonSerializer.LookupSerializer(t);
                     }
