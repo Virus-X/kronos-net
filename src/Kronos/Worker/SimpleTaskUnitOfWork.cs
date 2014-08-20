@@ -7,65 +7,54 @@ using log4net;
 
 namespace Intelli.Kronos.Worker
 {
-    public class SimpleTaskUnitOfWork : IUnitOfWork
+    public class SimpleTaskUnitOfWork : TaskUnitOfWorkBase
     {
         private static readonly ILog Log = LogManager.GetLogger(typeof(SimpleTaskUnitOfWork));
 
-        private readonly KronosTask task;
-        private readonly INodeTaskProcessorFactory processorFactory;
-
-        private readonly IKronosTaskService kronosTaskService;
         private readonly ITasksStorage taskStorage;
         private readonly IScheduledTasksStorage scheduledTasksStorage;
         private readonly IFailedTasksStorage failedTasksStorage;
 
-        public int Priority { get; private set; }
-
         public SimpleTaskUnitOfWork(
             KronosTask task,
-            IKronosTaskService kronosTaskService,
+            IKronosTaskService taskService,
             INodeTaskProcessorFactory processorFactory,
             ITasksStorage taskStorage,
             IScheduledTasksStorage scheduledTasksStorage,
             IFailedTasksStorage failedTasksStorage)
+            : base(task, taskService, taskStorage, processorFactory)
         {
-            Priority = (int)task.Priority;
-            this.task = task;
-            this.kronosTaskService = kronosTaskService;
-            this.processorFactory = processorFactory;
             this.taskStorage = taskStorage;
             this.scheduledTasksStorage = scheduledTasksStorage;
             this.failedTasksStorage = failedTasksStorage;
         }
 
-        public void Process(CancellationToken token)
+        public override void Process(CancellationToken token)
         {
-            var processor = processorFactory.GetProcessorFor(task);
-            taskStorage.SetState(task.Id, TaskState.Running);
             try
             {
-                processor.Process(task, kronosTaskService, token);
-                taskStorage.SetState(task.Id, TaskState.Completed);
-                Log.DebugFormat("Task {0} processed", task.Id);
+                ProcessBase(token);
+                taskStorage.SetState(Task.Id, TaskState.Completed);
+                Log.DebugFormat("Task {0} processed", Task.Id);
             }
             catch (Exception ex)
             {
-                Log.ErrorFormat("Task {0} crashed with exception: {1}", task.Id, ex);
-                failedTasksStorage.Add(new FailedTask(task, ex));
-                taskStorage.SetState(task.Id, TaskState.Failed);
+                Log.ErrorFormat("Task {0} crashed with exception: {1}", Task.Id, ex);
+                failedTasksStorage.Add(new FailedTask(Task, ex));
+                taskStorage.SetState(Task.Id, TaskState.Failed);
 
-                if (task.FailurePolicy == FailurePolicy.ExponentialRetry)
+                if (Task.FailurePolicy == FailurePolicy.ExponentialRetry)
                 {
                     Log.Debug("Task scheduled for retry");
-                    var retrySchedule = new TaskRetrySchedule(task);
+                    var retrySchedule = new TaskRetrySchedule(Task);
                     scheduledTasksStorage.Save(retrySchedule);
                 }
             }
         }
 
-        public void Release()
+        public override void Release()
         {
-            taskStorage.ReleaseLock(task);
+            taskStorage.ReleaseLock(Task);
         }
     }
 }

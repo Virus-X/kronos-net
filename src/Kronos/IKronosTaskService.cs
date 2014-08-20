@@ -70,5 +70,11 @@ namespace Intelli.Kronos
         /// <param name="startAt">Time to start task at.</param>
         /// <param name="interval">Interval between instances of scheduled task.</param>
         void EnsureTaskScheduled(string scheduleId, Func<KronosTask> taskFactory, DateTime startAt, TimeSpan interval);
+
+        /// <summary>
+        /// Adds multiple tasks with dependencies to each other.
+        /// </summary>
+        /// <param name="dag">Tasks dependency graph</param>
+        void AddDagTasks(DagBuilder dag);
     }
 }

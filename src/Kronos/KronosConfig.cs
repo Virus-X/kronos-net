@@ -19,6 +19,9 @@ namespace Intelli.Kronos
 
         public static int QueuePollPeriod = 1000;
 
+        public static bool UseCappedCollection = true;
+        public static long CappedCollectionSize = 1024 * 1024 * 1024; // 1GB
+
         /// <summary>
         /// Unique id for each node process. Generated on node start.
         /// </summary>

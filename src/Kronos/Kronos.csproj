@@ -49,6 +49,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DagBuilder.cs" />
     <Compile Include="KronosHost.cs" />
     <Compile Include="Processors\ContainerBasedProcessorFactory.cs" />
     <Compile Include="Processors\TaskProcessorMap.cs" />
@@ -74,6 +75,7 @@
     <Compile Include="Tasks\RecurrentSchedule.cs" />
     <Compile Include="Tasks\TaskRetrySchedule.cs" />
     <Compile Include="Worker\NodeState.cs" />
+    <Compile Include="Worker\TaskUnitOfWorkBase.cs" />
     <Compile Include="Worker\UnitOfWorkFactory.cs" />
     <Compile Include="Worker\RetryTaskUnitOfWork.cs" />
     <Compile Include="Worker\WorkQueueProvider.cs" />
@@ -92,7 +94,9 @@
     <Compile Include="Worker\SimpleTaskUnitOfWork.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Kronos.nuspec" />
+    <None Include="Kronos.nuspec">
+      <SubType>Designer</SubType>
+    </None>
     <None Include="packages.config" />
     <None Include="PublishPackage.bat" />
   </ItemGroup>

@@ -7,39 +7,33 @@ using log4net;
 
 namespace Intelli.Kronos.Worker
 {
-    public class RetryTaskUnitOfWork : IUnitOfWork
+    public class RetryTaskUnitOfWork : TaskUnitOfWorkBase
     {
         private static readonly ILog Log = LogManager.GetLogger(typeof(ScheduledTaskUnitOfWork));
-        public int Priority { get; private set; }
 
-        private readonly IKronosTaskService kronosTaskService;
         private readonly TaskRetrySchedule schedule;
-
-        private readonly INodeTaskProcessorFactory processorFactory;
         private readonly IScheduledTasksStorage scheduledTasksStorage;
         private readonly IFailedTasksStorage failedTasksStorage;
 
         public RetryTaskUnitOfWork(
             TaskRetrySchedule schedule,
-            IKronosTaskService kronosTaskService,
+            IKronosTaskService taskService,
+            ITasksStorage taskStorage,
             INodeTaskProcessorFactory processorFactory,
             IScheduledTasksStorage scheduledTasksStorage,
             IFailedTasksStorage failedTasksStorage)
+            : base(schedule.Task, taskService, taskStorage, processorFactory)
         {
-            Priority = (int)schedule.Task.Priority;
-            this.kronosTaskService = kronosTaskService;
             this.schedule = schedule;
-            this.processorFactory = processorFactory;
             this.scheduledTasksStorage = scheduledTasksStorage;
             this.failedTasksStorage = failedTasksStorage;
         }
 
-        public void Process(CancellationToken token)
+        public override void Process(CancellationToken token)
         {
             try
             {
-                var processor = processorFactory.GetProcessorFor(schedule.Task);
-                processor.Process(schedule.Task, kronosTaskService, token);
+                ProcessBase(token);
                 Log.DebugFormat("Task retry {0} succeed", schedule.Id);
             }
             catch (Exception ex)
@@ -56,16 +50,14 @@ namespace Intelli.Kronos.Worker
                     scheduledTasksStorage.ReleaseLock(schedule);
                     return;
                 }
-                else
-                {
-                    Log.ErrorFormat("Task {0} failed too many times. Disabled", schedule.Id);
-                }
+
+                Log.ErrorFormat("Task {0} failed too many times. Disabled", schedule.Id);
             }
 
             scheduledTasksStorage.Remove(schedule.Id);
         }
 
-        public void Release()
+        public override void Release()
         {
             scheduledTasksStorage.ReleaseLock(schedule);
         }

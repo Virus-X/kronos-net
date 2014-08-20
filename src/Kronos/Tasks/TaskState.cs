@@ -5,7 +5,7 @@ namespace Intelli.Kronos.Tasks
         None = 0,
         Pending = 1,
         Running = 2,
-        Deferred = 3,
+        WaitingForDependency = 3,
         Completed = 4,
         Failed = 5,
         Canceled = 6

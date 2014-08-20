@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using Intelli.Kronos.Tasks;
+using log4net;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using MongoDB.Driver.Builders;
-using log4net;
 
 namespace Intelli.Kronos.Storage
 {
@@ -13,15 +13,21 @@ namespace Intelli.Kronos.Storage
     {
         string Add(KronosTask task);
 
+        void Add(IEnumerable<KronosTask> tasks);
+
         KronosTask AllocateNext(Guid worknodeId);
 
         void ReleaseLock(KronosTask task);
 
-        int ReleaseAllTasks(Guid worknodeId);
+        int ReleaseLockedTasks(Guid worknodeId);
 
         void SetState(string taskId, TaskState newState);
+
         int RemapDiscriminator(string oldDiscriminator, string newDiscriminator);
+
         int CancelAllByDiscriminator(string discriminator);
+
+        KronosTask MarkDependencyProcessed(string taskId, string dependencyId);
     }
 
     public class TasksStorage : ITasksStorage
@@ -32,8 +38,24 @@ namespace Intelli.Kronos.Storage
 
         public TasksStorage(MongoDatabase db)
         {
-            tasksCollection = db.GetCollection<KronosTask>(KronosConfig.TasksCollection);
-            tasksCollection.CreateIndex(IndexKeys<KronosTask>.Ascending(x => x.Priority));
+            if (!db.CollectionExists(KronosConfig.TasksCollection))
+            {
+                var opts = new CollectionOptionsBuilder();
+                if (KronosConfig.UseCappedCollection)
+                {
+                    opts.SetCapped(KronosConfig.UseCappedCollection);
+                    opts.SetMaxSize(KronosConfig.CappedCollectionSize);
+                }
+
+                db.CreateCollection(KronosConfig.TasksCollection, opts);
+                tasksCollection = db.GetCollection<KronosTask>(KronosConfig.TasksCollection);
+                tasksCollection.CreateIndex(IndexKeys<KronosTask>.Ascending(x => x.Priority));
+            }
+            else
+            {
+                tasksCollection = db.GetCollection<KronosTask>(KronosConfig.TasksCollection);
+            }
+
             unknownTypes = new HashSet<string>();
         }
 
@@ -41,6 +63,11 @@ namespace Intelli.Kronos.Storage
         {
             tasksCollection.Insert(task);
             return task.Id;
+        }
+
+        public void Add(IEnumerable<KronosTask> tasks)
+        {
+            tasksCollection.InsertBatch(tasks);
         }
 
         public KronosTask AllocateNext(Guid worknodeId)
@@ -87,7 +114,7 @@ namespace Intelli.Kronos.Storage
             ReleaseLock(task.Id);
         }
 
-        public int ReleaseAllTasks(Guid worknodeId)
+        public int ReleaseLockedTasks(Guid worknodeId)
         {
             var q = Query.And(Query<KronosTask>.EQ(x => x.Lock.NodeId, worknodeId),
                               Query<KronosTask>.NE(x => x.State, TaskState.Completed));
@@ -125,6 +152,17 @@ namespace Intelli.Kronos.Storage
             var upd = Update<KronosTask>.Set(x => x.State, TaskState.Canceled);
             var options = new MongoUpdateOptions { Flags = UpdateFlags.Multi, WriteConcern = WriteConcern.Acknowledged };
             return (int)tasksCollection.Update(q, upd, options).DocumentsAffected;
+        }
+
+        public KronosTask MarkDependencyProcessed(string taskId, string dependencyId)
+        {
+            var q = Query.And(Query<KronosTask>.EQ(x => x.Id, taskId),
+                              Query<KronosTask>.EQ(x => x.State, TaskState.WaitingForDependency));
+
+            var upd = Update<KronosTask>.Pull(x => x.DependsOn, dependencyId);
+            var options = new FindAndModifyArgs { Query = q, Update = upd, VersionReturned = FindAndModifyDocumentVersion.Modified };
+            var res = tasksCollection.FindAndModify(options).GetModifiedDocumentAs<KronosTask>();
+            return res;
         }
 
         private void ReleaseLock(string taskId)

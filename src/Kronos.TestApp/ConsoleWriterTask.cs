@@ -9,9 +9,15 @@ namespace Kronos.TestApp
     [TaskProcessor(typeof(ConsoleWriterTaskProcessor))]
     public class ConsoleWriterTask : KronosTask
     {
-        public string CurrentTime
+        public string Text { get; set; }
+
+        public ConsoleWriterTask()
         {
-            get { return DateTime.Now.ToLongTimeString(); }
+        }
+
+        public ConsoleWriterTask(string rext)
+        {
+            Text = rext;
         }
     }
 
@@ -19,7 +25,9 @@ namespace Kronos.TestApp
     {
         public override void Process(ConsoleWriterTask task, IKronosTaskService taskService, CancellationToken token)
         {
-            Console.WriteLine(task.CurrentTime);
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine(task.Text);
+            Console.ResetColor();
         }
     }
 }

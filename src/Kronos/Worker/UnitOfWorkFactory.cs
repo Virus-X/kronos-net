@@ -23,7 +23,7 @@ namespace Intelli.Kronos.Worker
             IStorageFactory storageFactory,
             INodeTaskProcessorFactory taskProcessorFactory)
         {
-            this.kronosTaskService = kronosTaskService;            
+            this.kronosTaskService = kronosTaskService;
             this.taskProcessorFactory = taskProcessorFactory;
             tasksStorage = storageFactory.GetTasksStorage();
             scheduledTasksStorage = storageFactory.GetScheduledTasksStorage();
@@ -53,10 +53,11 @@ namespace Intelli.Kronos.Worker
         {
             if (schedule is TaskRetrySchedule)
             {
-                return new RetryTaskUnitOfWork(schedule as TaskRetrySchedule, kronosTaskService, taskProcessorFactory, scheduledTasksStorage, failedTasksStorage);
+                return new RetryTaskUnitOfWork(schedule as TaskRetrySchedule, kronosTaskService, tasksStorage,
+                                               taskProcessorFactory, scheduledTasksStorage, failedTasksStorage);
             }
 
-            return new ScheduledTaskUnitOfWork(schedule, kronosTaskService, taskProcessorFactory, scheduledTasksStorage, failedTasksStorage);
+            return new ScheduledTaskUnitOfWork(schedule, kronosTaskService, tasksStorage, taskProcessorFactory, scheduledTasksStorage, failedTasksStorage);
         }
     }
 }

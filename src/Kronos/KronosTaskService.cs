@@ -28,6 +28,12 @@ namespace Intelli.Kronos
             return tasksStorage.Add(task);
         }
 
+        public void AddDagTasks(DagBuilder dag)
+        {
+            var tasks = dag.CreateDag();
+            tasksStorage.Add(tasks);
+        }
+
         public string ScheduleTask(KronosTask task, DateTime startAt)
         {
             var scheduledTask = new TaskSchedule(task, new OneTimeSchedule(startAt));

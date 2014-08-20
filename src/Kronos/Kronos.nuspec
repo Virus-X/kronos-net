@@ -2,7 +2,7 @@
 <package >
   <metadata>
     <id>kronos-net</id>
-    <version>1.0.5-alpha</version>    
+    <version>1.0.6-alpha</version>    
     <authors>Valeriy Goncharenko</authors>      
     <projectUrl>https://github.com/Virus-X/kronos-net</projectUrl>    
     <requireLicenseAcceptance>false</requireLicenseAcceptance>

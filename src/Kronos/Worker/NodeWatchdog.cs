@@ -79,7 +79,7 @@ namespace Intelli.Kronos.Worker
             var deadNodes = nodes.Where(x => !x.IsOnline);
             foreach (var node in deadNodes)
             {
-                int releasedTasks = tasksStorage.ReleaseAllTasks(node.Id);
+                int releasedTasks = tasksStorage.ReleaseLockedTasks(node.Id);
                 releasedTasks += scheduledTasksStorage.ReleaseAllTasks(node.Id);
                 nodeStateStorage.Remove(node.Id);
 

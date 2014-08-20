@@ -59,6 +59,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DagBuilderTests.cs" />
+    <Compile Include="FakeTask.cs" />
     <Compile Include="IntegrationTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

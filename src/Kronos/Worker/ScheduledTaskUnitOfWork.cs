@@ -7,39 +7,33 @@ using log4net;
 
 namespace Intelli.Kronos.Worker
 {
-    public class ScheduledTaskUnitOfWork : IUnitOfWork
+    public class ScheduledTaskUnitOfWork : TaskUnitOfWorkBase
     {
         private static readonly ILog Log = LogManager.GetLogger(typeof(ScheduledTaskUnitOfWork));
 
         private readonly TaskSchedule schedule;
-        private readonly IKronosTaskService kronosTaskService;
-        private readonly INodeTaskProcessorFactory processorFactory;
         private readonly IScheduledTasksStorage scheduledTasksStorage;
         private readonly IFailedTasksStorage failedTasksStorage;
 
-        public int Priority { get; private set; }
-
         public ScheduledTaskUnitOfWork(
             TaskSchedule schedule,
-            IKronosTaskService kronosTaskService,
+            IKronosTaskService taskService,
+            ITasksStorage taskStorage,
             INodeTaskProcessorFactory processorFactory,
             IScheduledTasksStorage scheduledTasksStorage,
             IFailedTasksStorage failedTasksStorage)
+            : base(schedule.Task, taskService, taskStorage, processorFactory)
         {
-            Priority = (int)schedule.Task.Priority;
-            this.kronosTaskService = kronosTaskService;
             this.schedule = schedule;
-            this.processorFactory = processorFactory;
             this.scheduledTasksStorage = scheduledTasksStorage;
             this.failedTasksStorage = failedTasksStorage;
         }
 
-        public void Process(CancellationToken token)
+        public override void Process(CancellationToken token)
         {
             try
             {
-                var processor = processorFactory.GetProcessorFor(schedule.Task);
-                processor.Process(schedule.Task, kronosTaskService, token);
+                ProcessBase(token);
                 Log.DebugFormat("Schedule {0} processed", schedule.Id);
             }
             catch (Exception ex)
@@ -61,7 +55,7 @@ namespace Intelli.Kronos.Worker
             }
         }
 
-        public void Release()
+        public override void Release()
         {
             scheduledTasksStorage.ReleaseLock(schedule);
         }
