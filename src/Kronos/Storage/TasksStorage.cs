@@ -15,11 +15,11 @@ namespace Intelli.Kronos.Storage
 
         void Add(IEnumerable<KronosTask> tasks);
 
-        KronosTask AllocateNext(Guid worknodeId);
+        KronosTask AllocateNext(ObjectId worknodeId);
 
         void ReleaseLock(KronosTask task);
 
-        int ReleaseLockedTasks(Guid worknodeId);
+        int ReleaseLockedTasks(ObjectId worknodeId);
 
         void SetState(string taskId, TaskState newState);
 
@@ -48,14 +48,16 @@ namespace Intelli.Kronos.Storage
                 }
 
                 db.CreateCollection(KronosConfig.TasksCollection, opts);
-                tasksCollection = db.GetCollection<KronosTask>(KronosConfig.TasksCollection);
-                tasksCollection.CreateIndex(IndexKeys<KronosTask>.Ascending(x => x.Priority));
+                tasksCollection = db.GetCollection<KronosTask>(KronosConfig.TasksCollection);                ;
             }
             else
             {
                 tasksCollection = db.GetCollection<KronosTask>(KronosConfig.TasksCollection);
             }
 
+            tasksCollection.CreateIndex(IndexKeys<KronosTask>
+                .Ascending(x => x.State)
+                .Ascending(x => x.Priority));
             unknownTypes = new HashSet<string>();
         }
 
@@ -70,10 +72,9 @@ namespace Intelli.Kronos.Storage
             tasksCollection.InsertBatch(tasks);
         }
 
-        public KronosTask AllocateNext(Guid worknodeId)
+        public KronosTask AllocateNext(ObjectId worknodeId)
         {
-            var q = Query.And(Query<KronosTask>.EQ(x => x.Lock.NodeId, Guid.Empty),
-                              Query<KronosTask>.EQ(x => x.State, TaskState.Pending));
+            var q = Query.And(Query<KronosTask>.EQ(x => x.State, TaskState.Pending));
 
             if (unknownTypes.Count > 0)
             {
@@ -82,7 +83,8 @@ namespace Intelli.Kronos.Storage
                 q = Query.And(q, Query.NotIn("_t", unknownTypes.Select(BsonValue.Create)));
             }
 
-            var upd = Update<KronosTask>.Set(x => x.State, TaskState.Running)
+            var upd = Update<KronosTask>
+                .Set(x => x.State, TaskState.Running)
                 .Set(x => x.Lock, WorkerLock.Create(worknodeId));
 
             var args = new FindAndModifyArgs
@@ -114,13 +116,16 @@ namespace Intelli.Kronos.Storage
             ReleaseLock(task.Id);
         }
 
-        public int ReleaseLockedTasks(Guid worknodeId)
+        public int ReleaseLockedTasks(ObjectId worknodeId)
         {
-            var q = Query.And(Query<KronosTask>.EQ(x => x.Lock.NodeId, worknodeId),
-                              Query<KronosTask>.NE(x => x.State, TaskState.Completed));
+            var q = Query.And(
+                Query<KronosTask>.EQ(x => x.State, TaskState.Running),
+                Query<KronosTask>.EQ(x => x.Lock.NodeId, worknodeId));
+
             var upd = Update<KronosTask>
                 .Set(x => x.State, TaskState.Pending)
                 .Set(x => x.Lock, WorkerLock.None);
+
             var options = new MongoUpdateOptions { Flags = UpdateFlags.Multi, WriteConcern = WriteConcern.Acknowledged };
             return (int)tasksCollection.Update(q, upd, options).DocumentsAffected;
         }
@@ -134,9 +139,14 @@ namespace Intelli.Kronos.Storage
 
         public int RemapDiscriminator(string oldDiscriminator, string newDiscriminator)
         {
-            var q = Query.And(Query<KronosTask>.EQ(x => x.Lock.NodeId, Guid.Empty),
-                              Query<KronosTask>.NE(x => x.State, TaskState.Pending),
-                              Query.EQ("_t", oldDiscriminator));
+            if (KronosConfig.UseCappedCollection)
+            {
+                throw new NotSupportedException("Cannot remap discriminators while using capped collection");
+            }
+
+            var q = Query.And(
+                Query<KronosTask>.EQ(x => x.State, TaskState.Pending),
+                Query.EQ("_t", oldDiscriminator));
 
             var upd = Update.Set("_t", newDiscriminator);
             var options = new MongoUpdateOptions { Flags = UpdateFlags.Multi, WriteConcern = WriteConcern.Acknowledged };
@@ -145,9 +155,9 @@ namespace Intelli.Kronos.Storage
 
         public int CancelAllByDiscriminator(string discriminator)
         {
-            var q = Query.And(Query<KronosTask>.EQ(x => x.Lock.NodeId, Guid.Empty),
-                              Query<KronosTask>.NE(x => x.State, TaskState.Pending),
-                              Query.EQ("_t", discriminator));
+            var q = Query.And(
+                Query<KronosTask>.EQ(x => x.State, TaskState.Pending),
+                Query.EQ("_t", discriminator));
 
             var upd = Update<KronosTask>.Set(x => x.State, TaskState.Canceled);
             var options = new MongoUpdateOptions { Flags = UpdateFlags.Multi, WriteConcern = WriteConcern.Acknowledged };

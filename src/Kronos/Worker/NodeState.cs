@@ -1,10 +1,11 @@
 ﻿using System;
+using MongoDB.Bson;
 
 namespace Intelli.Kronos.Worker
 {
     public class NodeState
     {
-        public Guid Id { get; set; }
+        public ObjectId Id { get; set; }
 
         public string Ip { get; set; }
 

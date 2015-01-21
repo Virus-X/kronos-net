@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Intelli.Kronos.Worker;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using MongoDB.Driver.Builders;
 
@@ -12,7 +13,7 @@ namespace Intelli.Kronos.Storage
 
         IEnumerable<NodeState> GetAll();
 
-        void Remove(Guid nodeId);
+        void Remove(ObjectId nodeId);
     }
 
     public class NodeStateStorage : INodeStateStorage
@@ -34,7 +35,7 @@ namespace Intelli.Kronos.Storage
             return nodeCollection.FindAll();
         }
 
-        public void Remove(Guid nodeId)
+        public void Remove(ObjectId nodeId)
         {
             nodeCollection.Remove(Query<NodeState>.EQ(x => x.Id, nodeId));
         }

@@ -30,7 +30,7 @@ namespace Intelli.Kronos.Tasks
         public TaskSchedule()
         {
             Lock = WorkerLock.None;
-            Schedule = new OneTimeSchedule();
+            Schedule = new OneTimeSchedule();            
         }
 
         public TaskSchedule(KronosTask task, Schedule schedule, string id = null)

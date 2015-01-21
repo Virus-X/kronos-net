@@ -13,11 +13,11 @@ namespace Intelli.Kronos.Storage
     {
         string Save(TaskSchedule taskSchedule);
 
-        TaskSchedule AllocateNext(Guid worknodeId);
+        TaskSchedule AllocateNext(ObjectId worknodeId);
 
         void ReleaseLock(TaskSchedule taskSchedule);
 
-        int ReleaseAllTasks(Guid worknodeId);
+        int ReleaseAllTasks(ObjectId worknodeId);
 
         void Reschedule(TaskSchedule taskSchedule, Schedule newSchedule);
 
@@ -37,7 +37,8 @@ namespace Intelli.Kronos.Storage
         public ScheduledTasksStorage(MongoDatabase db)
         {
             taskCollection = db.GetCollection<TaskSchedule>(KronosConfig.ScheduledTasksCollection);
-            taskCollection.CreateIndex(IndexKeys<TaskSchedule>.Ascending(x => x.Schedule.RunAt));
+            taskCollection.CreateIndex(
+                IndexKeys<TaskSchedule>.Ascending(x => x.Lock.NodeId).Ascending(x => x.Schedule.RunAt));
             unknownTypes = new HashSet<string>();
         }
 
@@ -53,10 +54,10 @@ namespace Intelli.Kronos.Storage
             return taskSchedule.Id;
         }
 
-        public TaskSchedule AllocateNext(Guid worknodeId)
+        public TaskSchedule AllocateNext(ObjectId worknodeId)
         {
             var q = Query.And(
-                Query<TaskSchedule>.EQ(x => x.Lock.NodeId, Guid.Empty),
+                Query<TaskSchedule>.EQ(x => x.Lock.NodeId, ObjectId.Empty),
                 Query<TaskSchedule>.LTE(x => x.Schedule.RunAt, DateTime.UtcNow));
 
             if (unknownTypes.Count > 0)
@@ -96,7 +97,7 @@ namespace Intelli.Kronos.Storage
             ReleaseLock(taskSchedule.Id);
         }
 
-        public int ReleaseAllTasks(Guid worknodeId)
+        public int ReleaseAllTasks(ObjectId worknodeId)
         {
             var q = Query<TaskSchedule>.EQ(x => x.Lock.NodeId, worknodeId);
             var upd = Update<TaskSchedule>.Set(x => x.Lock, WorkerLock.None);
@@ -129,7 +130,7 @@ namespace Intelli.Kronos.Storage
 
         public int RemapDiscriminator(string oldDiscriminator, string newDiscriminator)
         {
-            var q = Query.And(Query<TaskSchedule>.EQ(x => x.Lock.NodeId, Guid.Empty),
+            var q = Query.And(Query<TaskSchedule>.EQ(x => x.Lock.NodeId, ObjectId.Empty),
                               Query.EQ("Task._t", oldDiscriminator));
 
             var upd = Update.Set("Task._t", newDiscriminator);
@@ -139,7 +140,7 @@ namespace Intelli.Kronos.Storage
 
         public int CancelAllByDiscriminator(string discriminator)
         {
-            var q = Query.And(Query<TaskSchedule>.EQ(x => x.Lock.NodeId, Guid.Empty),
+            var q = Query.And(Query<TaskSchedule>.EQ(x => x.Lock.NodeId, ObjectId.Empty),
                               Query.EQ("_t", discriminator));
 
             return (int)taskCollection.Remove(q, RemoveFlags.None, WriteConcern.Acknowledged).DocumentsAffected;

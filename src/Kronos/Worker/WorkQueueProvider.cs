@@ -2,6 +2,7 @@
 using System.Threading;
 using Intelli.Kronos.Storage;
 using log4net;
+using MongoDB.Bson;
 
 namespace Intelli.Kronos.Worker
 {
@@ -21,7 +22,7 @@ namespace Intelli.Kronos.Worker
     {
         private static readonly ILog Log = LogManager.GetLogger(typeof(WorkQueueProvider));
 
-        private readonly Guid worknodeId;
+        private readonly ObjectId worknodeId;
         private readonly ITasksStorage tasksStorage;
         private readonly IScheduledTasksStorage scheduledTasksStorage;
         private readonly IUnitOfWorkFactory unitOfWorkFactory;
@@ -45,7 +46,7 @@ namespace Intelli.Kronos.Worker
         }
 
         public WorkQueueProvider(
-            Guid worknodeId,
+            ObjectId worknodeId,
             IStorageFactory storageFactory,
             IUnitOfWorkFactory unitOfWorkFactory)
         {

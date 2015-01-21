@@ -1,6 +1,7 @@
 ﻿using System;
 using Intelli.Kronos.Processors;
 using Intelli.Kronos.Tasks;
+using MongoDB.Bson;
 
 namespace Intelli.Kronos
 {
@@ -11,7 +12,7 @@ namespace Intelli.Kronos
         public static string TasksCollection = "Kronos.Tasks";
         public static string ScheduledTasksCollection = "Kronos.ScheduledTasks";
         public static string FailedTasksCollection = "Kronos.FailedTasks";
-        public static string NodeStateCollection = "Kronos.Nodes";
+        public static string NodeStateCollection = "Kronos.WorkNodes";
 
         public static int MaxInternalQueueSize = 5;
 
@@ -25,7 +26,7 @@ namespace Intelli.Kronos
         /// <summary>
         /// Unique id for each node process. Generated on node start.
         /// </summary>
-        public static readonly Guid WorknodeId = Guid.NewGuid();
+        public static readonly ObjectId WorknodeId = ObjectId.GenerateNewId();
 
         static KronosConfig()
         {

@@ -5,6 +5,7 @@ using System.Net.Sockets;
 using System.Threading;
 using Intelli.Kronos.Storage;
 using log4net;
+using MongoDB.Bson;
 
 namespace Intelli.Kronos.Worker
 {
@@ -27,7 +28,7 @@ namespace Intelli.Kronos.Worker
         private readonly object timerLock = new object();
 
         public NodeWatchdog(
-            Guid worknodeId,
+            ObjectId worknodeId,
             IStorageFactory storageFactory)
         {
             nodeStateStorage = storageFactory.GetNodeStateStorage();

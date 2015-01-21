@@ -38,9 +38,9 @@ namespace Kronos.Tests
             db.DropCollection(KronosConfig.NodeStateCollection);
             db.DropCollection(KronosConfig.ScheduledTasksCollection);
 
-            host = new KronosHost(db, 1);
-
+            host = new KronosHost(db, 1);            
             taskService = new KronosTaskService(new StorageFactory(db));
+            host.Start();
         }
 
         [TearDown]
