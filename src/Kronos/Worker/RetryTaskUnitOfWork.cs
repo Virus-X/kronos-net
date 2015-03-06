@@ -34,13 +34,12 @@ namespace Intelli.Kronos.Worker
             try
             {
                 ProcessBase(token);
-                Log.DebugFormat("Task retry {0} succeed", schedule.Id);
             }
             catch (Exception ex)
             {
-                Log.ErrorFormat("Task {0} crashed with exception: {1}", schedule.Id, ex);
-                failedTasksStorage.Add(new FailedTask(schedule, ex));
+                Log.ErrorFormat("Task {0} crashed with exception: {1}", schedule.Task, ex);
                 schedule.RetriesCount++;
+                failedTasksStorage.Add(new FailedTask(schedule, ex));
 
                 if (schedule.CanRetryOnceMore())
                 {
@@ -51,7 +50,7 @@ namespace Intelli.Kronos.Worker
                     return;
                 }
 
-                Log.ErrorFormat("Task {0} failed too many times. Disabled", schedule.Id);
+                Log.ErrorFormat("Task {0} failed too many times. Disabled", schedule.Task);
             }
 
             scheduledTasksStorage.Remove(schedule.Id);

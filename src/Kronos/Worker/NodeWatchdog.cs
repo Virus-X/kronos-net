@@ -36,12 +36,12 @@ namespace Intelli.Kronos.Worker
             scheduledTasksStorage = storageFactory.GetScheduledTasksStorage();
             watchdogTimer = new Timer(OnTick);
             nodeState = new NodeState
-                        {
-                            Id = worknodeId,
-                            Host = Dns.GetHostName(),
-                            Ip = GetLocalIPAddress().ToString(),
-                            LastSeen = DateTime.UtcNow
-                        };
+            {
+                Id = worknodeId,
+                Host = Dns.GetHostName(),
+                Ip = GetLocalIPAddress().ToString(),
+                LastSeen = DateTime.UtcNow
+            };
         }
 
         public void Start()
@@ -78,12 +78,16 @@ namespace Intelli.Kronos.Worker
         {
             var nodes = nodeStateStorage.GetAll().ToList();
             var deadNodes = nodes.Where(x => !x.IsOnline);
+            int releasedTasks = 0;
             foreach (var node in deadNodes)
             {
-                int releasedTasks = tasksStorage.ReleaseLockedTasks(node.Id);
+                releasedTasks += tasksStorage.ReleaseLockedTasks(node.Id);
                 releasedTasks += scheduledTasksStorage.ReleaseAllTasks(node.Id);
-                nodeStateStorage.Remove(node.Id);
+                nodeStateStorage.Remove(node.Id);                
+            }
 
+            if (releasedTasks > 0)
+            {
                 Log.DebugFormat("Released {0} stalled tasks", releasedTasks);
             }
         }

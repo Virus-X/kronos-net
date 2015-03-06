@@ -50,7 +50,7 @@ namespace Intelli.Kronos.Worker
                     var task = taskStorage.MarkDependencyProcessed(taskId, Task.Id);
                     if (task != null && task.State == TaskState.WaitingForDependency && !task.HasDependencies)
                     {
-                        Log.InfoFormat("Task {0}: all dependencies completed, switching state to pending", task.Id);
+                        Log.DebugFormat("Task {0}: all dependencies completed, switching state to pending", task.Id);
                         taskStorage.SetState(task.Id, TaskState.Pending);
                     }
                 }

@@ -35,17 +35,17 @@ namespace Intelli.Kronos.Worker
             {
                 ProcessBase(token);
                 taskStorage.SetState(Task.Id, TaskState.Completed);
-                Log.DebugFormat("Task {0} processed", Task.Id);
+                Log.DebugFormat("Task {0} processed", Task);
             }
             catch (Exception ex)
             {
-                Log.ErrorFormat("Task {0} crashed with exception: {1}", Task.Id, ex);
+                Log.ErrorFormat("Task {0} crashed with exception: {1}", Task, ex);
                 failedTasksStorage.Add(new FailedTask(Task, ex));
                 taskStorage.SetState(Task.Id, TaskState.Failed);
 
                 if (Task.FailurePolicy == FailurePolicy.ExponentialRetry)
                 {
-                    Log.Debug("Task scheduled for retry");
+                    Log.DebugFormat("Task {0} scheduled for retry", Task);
                     var retrySchedule = new TaskRetrySchedule(Task);
                     scheduledTasksStorage.Save(retrySchedule);
                 }
