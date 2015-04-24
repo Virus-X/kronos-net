@@ -17,8 +17,7 @@ namespace Intelli.Kronos
     public class KronosHost : IDisposable, IKronosHost
     {
         private readonly INodeWatchdog watchdog;
-        private readonly IWorkQueueProvider workQueue;
-        private readonly IUnitOfWorkFactory unitOfWorkFactory;
+        private readonly IWorkQueueProvider workQueue;        
         private readonly List<NodeWorker> workers;
         private readonly object syncRoot = new object();
 
@@ -33,7 +32,7 @@ namespace Intelli.Kronos
 
             var taskManagementService = new KronosTaskService(storageFactory);
 
-            unitOfWorkFactory = new UnitOfWorkFactory(taskManagementService, storageFactory, KronosConfig.ProcessorFactory);
+            var unitOfWorkFactory = new UnitOfWorkFactory(taskManagementService, storageFactory, KronosConfig.ProcessorFactory);
             workQueue = new WorkQueueProvider(worknodeId, storageFactory, unitOfWorkFactory);
             watchdog = new NodeWatchdog(worknodeId, storageFactory);
 
@@ -71,7 +70,7 @@ namespace Intelli.Kronos
                 {
                     cts.Cancel();
                     watchdog.Stop();
-                    isRunning = false;
+                    isRunning = false;                    
                 }
             }
         }
@@ -79,6 +78,10 @@ namespace Intelli.Kronos
         public void Dispose()
         {
             Stop();
+            foreach (var worker in workers)
+            {
+                worker.Dispose();
+            }
         }
     }
 }

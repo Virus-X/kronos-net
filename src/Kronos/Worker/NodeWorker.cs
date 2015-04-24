@@ -1,17 +1,20 @@
 ﻿using System;
 using System.Threading;
-using System.Threading.Tasks;
 using log4net;
 
 namespace Intelli.Kronos.Worker
 {
-    public class NodeWorker
+    public class NodeWorker : IDisposable
     {
         private static readonly ILog Log = LogManager.GetLogger(typeof(NodeWorker));
 
         private readonly IWorkQueueProvider queueProvider;
 
         private readonly object syncRoot = new object();
+
+        private Thread workerThread;
+
+        private CancellationTokenSource cancellationSource;
 
         private bool isRunning;
 
@@ -32,20 +35,9 @@ namespace Intelli.Kronos.Worker
                 isRunning = true;
             }
 
-            Task.Factory.StartNew(WorkerLoop, token, token, TaskCreationOptions.LongRunning, TaskScheduler.Default)
-                .ContinueWith(t =>
-                                  {
-                                      lock (syncRoot)
-                                      {
-                                          isRunning = false;
-                                      }
-
-                                      if (t.IsFaulted && t.Exception != null)
-                                      {
-                                          Log.Error("Worker loop stopped with unhandled exception: ", t.Exception.GetBaseException());
-                                      }
-                                  });
-
+            cancellationSource = CancellationTokenSource.CreateLinkedTokenSource(token);
+            workerThread = new Thread(WorkerLoop) { Name = "KronosWorker" };
+            workerThread.Start(cancellationSource.Token);
         }
 
         private void WorkerLoop(object state)
@@ -54,13 +46,27 @@ namespace Intelli.Kronos.Worker
 
             while (true)
             {
-                token.ThrowIfCancellationRequested();
+                if (token.IsCancellationRequested)
+                {
+                    return;
+                }
+
                 var unitOfWork = queueProvider.GetNextTask(token);
                 if (unitOfWork != null)
                 {
                     unitOfWork.Process(token);
                 }
             }
+        }
+
+        public void Dispose()
+        {
+            lock (syncRoot)
+            {
+                isRunning = false;
+            }
+
+            cancellationSource.Cancel();
         }
     }
 }
