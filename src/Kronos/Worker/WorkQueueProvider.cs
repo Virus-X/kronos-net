@@ -91,7 +91,7 @@ namespace Intelli.Kronos.Worker
                     }
                 }
 
-                enqueuedEvent.WaitOne();
+                enqueuedEvent.WaitOne(500);
             }
         }
 
