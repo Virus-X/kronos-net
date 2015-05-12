@@ -116,10 +116,9 @@ namespace Intelli.Kronos.Worker
                     token.ThrowIfCancellationRequested();
                     if (!semaphoreTaken)
                     {
-                        queueSemaphore.Wait();
+                        queueSemaphore.Wait(token);                        
                         semaphoreTaken = true;
                     }
-
 
                     var schedule = scheduledTasksStorage.AllocateNext(worknodeId);
                     if (schedule != null)
@@ -136,9 +135,8 @@ namespace Intelli.Kronos.Worker
                         semaphoreTaken = false;
                         continue;
                     }
-
-                    token.ThrowIfCancellationRequested();
-                    Thread.Sleep(KronosConfig.QueuePollPeriod);
+                    
+                    token.WaitHandle.WaitOne(KronosConfig.QueuePollPeriod);
                 }
                 catch (OperationCanceledException)
                 {
