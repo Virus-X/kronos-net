@@ -79,7 +79,10 @@ namespace Intelli.Kronos.Worker
         {
             while (true)
             {
-                token.ThrowIfCancellationRequested();
+                if (token.IsCancellationRequested)
+                {
+                    return null;                    
+                }
 
                 lock (internalQueue)
                 {
@@ -127,7 +130,7 @@ namespace Intelli.Kronos.Worker
                         semaphoreTaken = false;
                         continue;
                     }
-
+                    
                     var task = tasksStorage.AllocateNext(worknodeId);
                     if (task != null)
                     {

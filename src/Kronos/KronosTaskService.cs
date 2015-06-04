@@ -49,7 +49,11 @@ namespace Intelli.Kronos
             }
             else
             {
-                scheduledTasksStorage.Reschedule(scheduledTask, new RecurrentSchedule(startAt, interval));
+                var schedule = scheduledTask.Schedule as RecurrentSchedule;
+                if (schedule == null || schedule.Interval != interval)
+                {
+                    scheduledTasksStorage.Reschedule(scheduledTask, new RecurrentSchedule(startAt, interval));
+                }
             }
         }
 
