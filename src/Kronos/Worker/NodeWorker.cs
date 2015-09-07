@@ -1,6 +1,6 @@
-﻿using System;
+﻿using log4net;
+using System;
 using System.Threading;
-using log4net;
 
 namespace Intelli.Kronos.Worker
 {
@@ -46,15 +46,23 @@ namespace Intelli.Kronos.Worker
 
             while (true)
             {
-                if (token.IsCancellationRequested)
+                try
                 {
-                    return;
-                }
+                    if (token.IsCancellationRequested)
+                    {
+                        return;
+                    }
 
-                var unitOfWork = queueProvider.GetNextTask(token);
-                if (unitOfWork != null)
+                    var unitOfWork = queueProvider.GetNextTask(token);
+                    if (unitOfWork != null)
+                    {
+                        unitOfWork.Process(token);
+                    }
+                }
+                catch (Exception ex)
                 {
-                    unitOfWork.Process(token);
+                    Log.ErrorFormat("Unhandled exception in worker loop: {0}", ex);
+                    Thread.Sleep(5000);
                 }
             }
         }
