@@ -1,9 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading;
-using Intelli.Kronos.Storage;
+﻿using Intelli.Kronos.Storage;
 using Intelli.Kronos.Worker;
 using MongoDB.Driver;
+using System;
+using System.Collections.Generic;
+using System.Threading;
 
 namespace Intelli.Kronos
 {
@@ -17,7 +17,7 @@ namespace Intelli.Kronos
     public class KronosHost : IDisposable, IKronosHost
     {
         private readonly INodeWatchdog watchdog;
-        private readonly IWorkQueueProvider workQueue;        
+        private readonly IWorkQueueProvider workQueue;
         private readonly List<NodeWorker> workers;
         private readonly object syncRoot = new object();
 
@@ -34,13 +34,14 @@ namespace Intelli.Kronos
 
             var unitOfWorkFactory = new UnitOfWorkFactory(taskManagementService, storageFactory, KronosConfig.ProcessorFactory);
             workQueue = new WorkQueueProvider(worknodeId, storageFactory, unitOfWorkFactory);
-            watchdog = new NodeWatchdog(worknodeId, storageFactory);
 
             workers = new List<NodeWorker>(workerCount);
-            for (int i = 0; i < workerCount; i++)
+            for (var i = 0; i < workerCount; i++)
             {
                 workers.Add(new NodeWorker(workQueue));
             }
+
+            watchdog = new NodeWatchdog(worknodeId, storageFactory, workers);
         }
 
         public void Start()
@@ -70,7 +71,7 @@ namespace Intelli.Kronos
                 {
                     cts.Cancel();
                     watchdog.Stop();
-                    isRunning = false;                    
+                    isRunning = false;
                 }
             }
         }

@@ -20,6 +20,8 @@ namespace Intelli.Kronos
 
         public static int QueuePollPeriod = 1000;
 
+        public static int TaskTimeoutSeconds = 5 * 60; // 5 min
+
         public static bool UseCappedCollection = true;
         public static long CappedCollectionSize = 1024 * 1024 * 1024; // 1GB
 

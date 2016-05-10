@@ -16,6 +16,13 @@ namespace Intelli.Kronos.Worker
 
         private CancellationTokenSource cancellationSource;
 
+        private volatile WorkerJob currentJob;
+
+        public WorkerJob CurrentJob
+        {
+            get { return currentJob; }
+        }
+
         private bool isRunning;
 
         public NodeWorker(IWorkQueueProvider queueProvider)
@@ -53,10 +60,13 @@ namespace Intelli.Kronos.Worker
                         return;
                     }
 
-                    var unitOfWork = queueProvider.GetNextTask(token);
-                    if (unitOfWork != null)
+                    var task = queueProvider.GetNextTask(token);
+                    if (task != null)
                     {
-                        unitOfWork.Process(token);
+                        var tokenSource = CancellationTokenSource.CreateLinkedTokenSource(token);
+                        currentJob = new WorkerJob(task, tokenSource);
+                        task.Process(token);
+                        currentJob = null;
                     }
                 }
                 catch (Exception ex)
