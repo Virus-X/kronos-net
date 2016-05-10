@@ -6,9 +6,9 @@ using Intelli.Kronos;
 using Intelli.Kronos.Processors;
 using Intelli.Kronos.Storage;
 using Intelli.Kronos.Tasks;
+using log4net.Config;
 using MongoDB.Driver;
 using NUnit.Framework;
-using log4net.Config;
 
 namespace Kronos.Tests
 {
@@ -28,7 +28,6 @@ namespace Kronos.Tests
         [SetUp]
         public void SetUp()
         {
-
             var mongoUri = ConfigurationManager.ConnectionStrings["MongoDB"].ConnectionString;
             var mongoClient = new MongoClient(mongoUri);
             var db = mongoClient.GetServer().GetDatabase(new MongoUrl(mongoUri).DatabaseName);
@@ -64,7 +63,7 @@ namespace Kronos.Tests
             host.Start();
             taskService.AddTask(new StubTask { SimulateCrash = true });
             processedEvent.WaitOne(200000).Should().BeTrue();
-        }
+        }        
 
         [TaskProcessor(typeof(StubTaskProcessor))]
         private class StubTask : KronosTask

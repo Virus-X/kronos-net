@@ -1,6 +1,6 @@
-﻿using System;
+﻿using Intelli.Kronos.Tasks;
+using System;
 using System.Threading;
-using Intelli.Kronos.Tasks;
 
 namespace Intelli.Kronos.Processors
 {
@@ -14,14 +14,13 @@ namespace Intelli.Kronos.Processors
 
         public void Process(KronosTask task, IKronosTaskService taskService, CancellationToken token)
         {
-            if (task is T)
-            {
-                Process(task as T, taskService, token);
-            }
-            else
+            var t = task as T;
+            if (t == null)
             {
                 throw new ArgumentException("Invalid task specified");
             }
+
+            Process(t, taskService, token);
         }
 
         public abstract void Process(T task, IKronosTaskService taskService, CancellationToken token);

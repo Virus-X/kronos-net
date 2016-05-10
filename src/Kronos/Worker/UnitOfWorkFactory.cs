@@ -53,7 +53,7 @@ namespace Intelli.Kronos.Worker
         {
             if (schedule is TaskRetrySchedule)
             {
-                return new RetryTaskUnitOfWork(schedule as TaskRetrySchedule, kronosTaskService, tasksStorage,
+                return new RetryTaskUnitOfWork((TaskRetrySchedule) schedule, kronosTaskService, tasksStorage,
                                                taskProcessorFactory, scheduledTasksStorage, failedTasksStorage);
             }
 
