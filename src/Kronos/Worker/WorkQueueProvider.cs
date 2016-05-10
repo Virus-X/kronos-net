@@ -1,8 +1,8 @@
-﻿using System;
-using System.Threading;
-using Intelli.Kronos.Storage;
+﻿using Intelli.Kronos.Storage;
 using log4net;
 using MongoDB.Bson;
+using System;
+using System.Threading;
 
 namespace Intelli.Kronos.Worker
 {
@@ -81,7 +81,7 @@ namespace Intelli.Kronos.Worker
             {
                 if (token.IsCancellationRequested)
                 {
-                    return null;                    
+                    return null;
                 }
 
                 lock (internalQueue)
@@ -117,9 +117,14 @@ namespace Intelli.Kronos.Worker
                 try
                 {
                     token.ThrowIfCancellationRequested();
-                    if (!semaphoreTaken)
+                    while (!semaphoreTaken)
                     {
-                        queueSemaphore.Wait(token);                        
+                        if (!queueSemaphore.Wait(TimeSpan.FromSeconds(30), token))
+                        {
+                            Log.Warn("Waited for queue 30 seconds");
+                            continue;                            
+                        }
+
                         semaphoreTaken = true;
                     }
 
@@ -130,7 +135,7 @@ namespace Intelli.Kronos.Worker
                         semaphoreTaken = false;
                         continue;
                     }
-                    
+
                     var task = tasksStorage.AllocateNext(worknodeId);
                     if (task != null)
                     {
@@ -138,7 +143,7 @@ namespace Intelli.Kronos.Worker
                         semaphoreTaken = false;
                         continue;
                     }
-                    
+
                     token.WaitHandle.WaitOne(KronosConfig.QueuePollPeriod);
                 }
                 catch (OperationCanceledException)
