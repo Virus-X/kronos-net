@@ -1,9 +1,9 @@
-using System;
-using System.Threading;
 using Intelli.Kronos.Processors;
 using Intelli.Kronos.Storage;
 using Intelli.Kronos.Tasks;
 using log4net;
+using System;
+using System.Threading;
 
 namespace Intelli.Kronos.Worker
 {
@@ -29,13 +29,19 @@ namespace Intelli.Kronos.Worker
             this.failedTasksStorage = failedTasksStorage;
         }
 
-        public override void Process(CancellationToken token)
+        public override void Process(CancellationToken token, long timeout)
         {
             try
             {
-                ProcessBase(token);
+                ProcessBase(token, timeout);
                 taskStorage.SetState(Task.Id, TaskState.Completed);
                 Log.DebugFormat("Task {0} processed", Task);
+            }
+            catch (OperationCanceledException)
+            {
+                Log.ErrorFormat("Task {0} was canceled ({1}). Returning back to queue", Task, StopReason);
+                taskStorage.SetState(Task.Id, TaskState.Pending);
+                Release();                
             }
             catch (Exception ex)
             {

@@ -1,12 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using Intelli.Kronos.Processors;
+﻿using Intelli.Kronos.Processors;
 using Intelli.Kronos.Storage;
 using Intelli.Kronos.Tasks;
 using log4net;
+using System;
+using System.Threading;
 
 namespace Intelli.Kronos.Worker
 {
@@ -15,15 +12,37 @@ namespace Intelli.Kronos.Worker
         private static readonly ILog Log = LogManager.GetLogger(typeof(TaskUnitOfWorkBase));
 
         public int Priority { get; protected set; }
+
         public KronosTask Task { get; private set; }
 
         private readonly IKronosTaskService taskService;
         private readonly ITasksStorage taskStorage;
         private readonly INodeTaskProcessorFactory processorFactory;
 
-        public abstract void Process(CancellationToken token);
+        private CancellationTokenSource cancellationTokenSource;
+        private volatile TaskStopReason stopReason;
+        private DateTime? timeoutAt;
+
+        public TaskStopReason StopReason
+        {
+            get { return stopReason; }
+        }
+
+        public DateTime? TimeoutAt
+        {
+            get { return timeoutAt; }
+        }
+
+        public abstract void Process(CancellationToken token, long timeout);
 
         public abstract void Release();
+
+        public void KillTask(TaskStopReason reason)
+        {
+            Log.WarnFormat("Stopping task with reason: {0}", reason);
+            stopReason = reason;
+            cancellationTokenSource.Cancel();
+        }
 
         public TaskUnitOfWorkBase(
             KronosTask task,
@@ -38,10 +57,26 @@ namespace Intelli.Kronos.Worker
             this.processorFactory = processorFactory;
         }
 
-        protected void ProcessBase(CancellationToken token)
+        protected void ProcessBase(CancellationToken token, long timeout)
         {
+            cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token);
+            timeoutAt = DateTime.UtcNow.AddMilliseconds(timeout);
+
             var processor = processorFactory.GetProcessorFor(Task);
-            processor.Process(Task, taskService, token);
+
+            try
+            {
+                processor.Process(Task, taskService, cancellationTokenSource.Token);
+            }
+            catch (OperationCanceledException ex)
+            {
+                if (StopReason == TaskStopReason.Timeout)
+                {
+                    throw new TimeoutException("Task execution timeout", ex);
+                }
+
+                throw;
+            }
 
             if (Task.ChildTasks != null)
             {
@@ -55,6 +90,11 @@ namespace Intelli.Kronos.Worker
                     }
                 }
             }
+        }
+
+        public override string ToString()
+        {
+            return Task.ToString();
         }
     }
 }

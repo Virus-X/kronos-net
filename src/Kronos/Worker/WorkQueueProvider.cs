@@ -121,8 +121,8 @@ namespace Intelli.Kronos.Worker
                     {
                         if (!queueSemaphore.Wait(TimeSpan.FromSeconds(30), token))
                         {
-                            Log.Warn("Waited for queue 30 seconds");
-                            continue;                            
+                            Log.WarnFormat("Waited for queue 30 seconds. Queue size: {0}", TasksInQueue);
+                            continue;
                         }
 
                         semaphoreTaken = true;

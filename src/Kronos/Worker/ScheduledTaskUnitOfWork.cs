@@ -1,9 +1,9 @@
-using System;
-using System.Threading;
 using Intelli.Kronos.Processors;
 using Intelli.Kronos.Storage;
 using Intelli.Kronos.Tasks;
 using log4net;
+using System;
+using System.Threading;
 
 namespace Intelli.Kronos.Worker
 {
@@ -29,12 +29,20 @@ namespace Intelli.Kronos.Worker
             this.failedTasksStorage = failedTasksStorage;
         }
 
-        public override void Process(CancellationToken token)
+        public override void Process(CancellationToken token, long timeout)
         {
+            var canceled = false;
+
             try
-            {
-                ProcessBase(token);
+            {                
+                ProcessBase(token, timeout);
                 Log.DebugFormat("Schedule {0} processed", schedule.Id);
+            }
+            catch (OperationCanceledException)
+            {
+                Log.ErrorFormat("Task {0} was canceled ({1}). Returning back to queue", Task, StopReason);
+                canceled = true;
+                Release();
             }
             catch (Exception ex)
             {
@@ -50,8 +58,11 @@ namespace Intelli.Kronos.Worker
             }
             finally
             {
-                // If nextSchedule is null, task would be removed
-                scheduledTasksStorage.Reschedule(schedule, schedule.GetNextSchedule());
+                if (!canceled)
+                {
+                    // If nextSchedule is null, task would be removed
+                    scheduledTasksStorage.Reschedule(schedule, schedule.GetNextSchedule());
+                }
             }
         }
 

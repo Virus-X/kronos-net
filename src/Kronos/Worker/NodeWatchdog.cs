@@ -106,10 +106,10 @@ namespace Intelli.Kronos.Worker
             foreach (var worker in workers)
             {
                 var job = worker.CurrentJob;
-                if (job != null && job.MillisecondsElapsed > KronosConfig.TaskTimeoutSeconds)
+                if (job != null && job.TimeoutAt < DateTime.UtcNow)
                 {
-                    Log.WarnFormat("Current job ({0}) processing timeout reached. Trying to kill", job.Task);
-                    job.Kill();
+                    Log.WarnFormat("Current task ({0}) processing timeout reached. Trying to kill", job);
+                    job.KillTask(TaskStopReason.Timeout);
                 }
             }
         }

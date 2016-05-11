@@ -1,7 +1,4 @@
-﻿using System;
-using System.Configuration;
-using System.Threading;
-using FluentAssertions;
+﻿using FluentAssertions;
 using Intelli.Kronos;
 using Intelli.Kronos.Processors;
 using Intelli.Kronos.Storage;
@@ -9,6 +6,9 @@ using Intelli.Kronos.Tasks;
 using log4net.Config;
 using MongoDB.Driver;
 using NUnit.Framework;
+using System;
+using System.Configuration;
+using System.Threading;
 
 namespace Kronos.Tests
 {
@@ -62,13 +62,15 @@ namespace Kronos.Tests
         {
             host.Start();
             taskService.AddTask(new StubTask { SimulateCrash = true });
-            processedEvent.WaitOne(200000).Should().BeTrue();
+            processedEvent.WaitOne(5000).Should().BeFalse();
         }        
 
         [TaskProcessor(typeof(StubTaskProcessor))]
         private class StubTask : KronosTask
         {
             public bool SimulateCrash { get; set; }
+
+            public bool SimulateTimeout { get; set; }
         }
 
         private class StubTaskProcessor : KronosTaskProcessor<StubTask>
@@ -78,6 +80,11 @@ namespace Kronos.Tests
                 if (task.SimulateCrash)
                 {
                     throw new InvalidOperationException("oops");
+                }
+
+                if (task.SimulateTimeout)
+                {
+                    token.WaitHandle.WaitOne(100000);
                 }
 
                 processedEvent.Set();

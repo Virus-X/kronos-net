@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System;
 using System.Threading;
 
 namespace Intelli.Kronos.Worker
@@ -9,8 +7,17 @@ namespace Intelli.Kronos.Worker
     {
         int Priority { get; }
 
-        void Process(CancellationToken token);
+        DateTime? TimeoutAt { get; }
+
+        /// <summary>
+        /// Starts processing the task
+        /// </summary>
+        /// <param name="token">Cancellation token to stop the task manually</param>
+        /// <param name="timeout">Task timeout in milliseconds</param>
+        void Process(CancellationToken token, long timeout);
 
         void Release();
+
+        void KillTask(TaskStopReason reason);
     }
 }

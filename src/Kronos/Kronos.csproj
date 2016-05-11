@@ -75,10 +75,10 @@
     <Compile Include="Tasks\RecurrentSchedule.cs" />
     <Compile Include="Tasks\TaskRetrySchedule.cs" />
     <Compile Include="Worker\NodeState.cs" />
+    <Compile Include="Worker\TaskStopReason.cs" />
     <Compile Include="Worker\TaskUnitOfWorkBase.cs" />
     <Compile Include="Worker\UnitOfWorkFactory.cs" />
     <Compile Include="Worker\RetryTaskUnitOfWork.cs" />
-    <Compile Include="Worker\WorkerJob.cs" />
     <Compile Include="Worker\WorkQueueProvider.cs" />
     <Compile Include="KronosTaskService.cs" />
     <Compile Include="Tasks\KronosTask.cs" />

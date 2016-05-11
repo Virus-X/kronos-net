@@ -1,8 +1,10 @@
 using System;
 using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
 
 namespace Intelli.Kronos.Tasks
 {
+    [BsonKnownTypes(typeof(TaskRetrySchedule))]
     public class TaskSchedule
     {
         private Schedule schedule;

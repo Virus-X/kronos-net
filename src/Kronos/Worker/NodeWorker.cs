@@ -16,9 +16,9 @@ namespace Intelli.Kronos.Worker
 
         private CancellationTokenSource cancellationSource;
 
-        private volatile WorkerJob currentJob;
+        private volatile IUnitOfWork currentJob;
 
-        public WorkerJob CurrentJob
+        public IUnitOfWork CurrentJob
         {
             get { return currentJob; }
         }
@@ -63,9 +63,8 @@ namespace Intelli.Kronos.Worker
                     var task = queueProvider.GetNextTask(token);
                     if (task != null)
                     {
-                        var tokenSource = CancellationTokenSource.CreateLinkedTokenSource(token);
-                        currentJob = new WorkerJob(task, tokenSource);
-                        task.Process(token);
+                        currentJob = task;
+                        task.Process(token, KronosConfig.TaskTimeoutSeconds * 1000);
                         currentJob = null;
                     }
                 }
