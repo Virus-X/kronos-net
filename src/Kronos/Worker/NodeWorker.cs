@@ -50,6 +50,7 @@ namespace Intelli.Kronos.Worker
         private void WorkerLoop(object state)
         {
             var token = (CancellationToken)state;
+            var taskTimeout = KronosConfig.TaskTimeoutSeconds * 1000;
 
             while (true)
             {
@@ -60,17 +61,20 @@ namespace Intelli.Kronos.Worker
                         return;
                     }
 
-                    var task = queueProvider.GetNextTask(token);
-                    if (task != null)
+                    using (var task = queueProvider.GetNextTask(token))
                     {
-                        currentJob = task;
-                        task.Process(token, KronosConfig.TaskTimeoutSeconds * 1000);
-                        currentJob = null;
+                        if (task != null)
+                        {
+                            currentJob = task;
+                            task.Process(token, taskTimeout);
+                            currentJob = null;
+                        }
                     }
                 }
                 catch (Exception ex)
                 {
                     Log.ErrorFormat("Unhandled exception in worker loop: {0}", ex);
+                    currentJob = null;
                     Thread.Sleep(5000);
                 }
             }
@@ -84,6 +88,7 @@ namespace Intelli.Kronos.Worker
             }
 
             cancellationSource.Cancel();
+            cancellationSource.Dispose();
         }
     }
 }

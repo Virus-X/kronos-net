@@ -96,5 +96,10 @@ namespace Intelli.Kronos.Worker
         {
             return Task.ToString();
         }
+
+        public void Dispose()
+        {
+            cancellationTokenSource.Dispose();
+        }
     }
 }

@@ -3,7 +3,7 @@ using System.Threading;
 
 namespace Intelli.Kronos.Worker
 {
-    public interface IUnitOfWork
+    public interface IUnitOfWork: IDisposable
     {
         int Priority { get; }
 
