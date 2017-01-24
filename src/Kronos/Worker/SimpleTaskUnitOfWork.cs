@@ -3,6 +3,7 @@ using Intelli.Kronos.Storage;
 using Intelli.Kronos.Tasks;
 using log4net;
 using System;
+using System.Diagnostics;
 using System.Threading;
 
 namespace Intelli.Kronos.Worker
@@ -31,17 +32,18 @@ namespace Intelli.Kronos.Worker
 
         public override void Process(CancellationToken token, long timeout)
         {
+            var sw = Stopwatch.StartNew();
             try
             {
                 ProcessBase(token, timeout);
                 taskStorage.SetState(Task.Id, TaskState.Completed);
-                Log.DebugFormat("Task {0} processed", Task);
+                Log.DebugFormat("Task {0} processed [{1}s]", Task, sw.ElapsedMilliseconds / 1000);
             }
             catch (OperationCanceledException)
             {
                 Log.ErrorFormat("Task {0} was canceled ({1}). Returning back to queue", Task, StopReason);
                 taskStorage.SetState(Task.Id, TaskState.Pending);
-                Release();                
+                Release();
             }
             catch (Exception ex)
             {

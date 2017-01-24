@@ -50,6 +50,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="DagBuilder.cs" />
+    <Compile Include="IMetricsCounter.cs" />
     <Compile Include="KronosHost.cs" />
     <Compile Include="Processors\ContainerBasedProcessorFactory.cs" />
     <Compile Include="Processors\TaskProcessorMap.cs" />

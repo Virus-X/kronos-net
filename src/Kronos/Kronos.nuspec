@@ -2,11 +2,11 @@
 <package >
   <metadata>
     <id>kronos-net</id>
-    <version>1.0.17-alpha</version>    
+    <version>1.0.18-alpha</version>    
     <authors>Valeriy Goncharenko</authors>      
     <projectUrl>https://github.com/Virus-X/kronos-net</projectUrl>    
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>Distributed background job processing framework for .NET</description>    
-    <copyright>IntelliSoftware 2016</copyright>    
+    <copyright>IntelliSoftware 2017</copyright>    
   </metadata>
 </package>

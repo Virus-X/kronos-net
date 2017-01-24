@@ -2,6 +2,7 @@
 using log4net;
 using MongoDB.Bson;
 using System;
+using System.Linq;
 using System.Threading;
 
 namespace Intelli.Kronos.Worker
@@ -121,7 +122,11 @@ namespace Intelli.Kronos.Worker
                     {
                         if (!queueSemaphore.Wait(TimeSpan.FromSeconds(30), token))
                         {
-                            Log.WarnFormat("Waited for queue 30 seconds. Queue size: {0}", TasksInQueue);
+                            lock (internalQueue)
+                            {
+                                Log.WarnFormat("Waited for queue 30 seconds. Queue size: {0}. Tasks: {1}",
+                                    internalQueue.Count, string.Join(",", internalQueue.Select(x => x.Value)));
+                            }
                             continue;
                         }
 

@@ -76,5 +76,7 @@ namespace Intelli.Kronos
         /// </summary>
         /// <param name="dag">Tasks dependency graph</param>
         void AddDagTasks(DagBuilder dag);
+
+        IMetricsCounter MetricsCounter { get; }
     }
 }

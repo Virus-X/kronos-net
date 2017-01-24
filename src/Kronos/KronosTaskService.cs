@@ -1,22 +1,29 @@
-﻿using System;
-using Intelli.Kronos.Storage;
+﻿using Intelli.Kronos.Storage;
 using Intelli.Kronos.Tasks;
 using MongoDB.Driver;
+using System;
 
 namespace Intelli.Kronos
 {
     public class KronosTaskService : IKronosTaskService
     {
+        private readonly IMetricsCounter metricsCounter;
         private readonly ITasksStorage tasksStorage;
         private readonly IScheduledTasksStorage scheduledTasksStorage;
 
-        public KronosTaskService(MongoDatabase db)
-            : this(new StorageFactory(db))
+        public IMetricsCounter MetricsCounter
+        {
+            get { return metricsCounter; }
+        }
+
+        public KronosTaskService(MongoDatabase db, IMetricsCounter metricsCounter)
+            : this(new StorageFactory(db), metricsCounter)
         {
         }
 
-        public KronosTaskService(IStorageFactory storageFactory)
+        public KronosTaskService(IStorageFactory storageFactory, IMetricsCounter metricsCounter)
         {
+            this.metricsCounter = metricsCounter;
             tasksStorage = storageFactory.GetTasksStorage();
             scheduledTasksStorage = storageFactory.GetScheduledTasksStorage();
         }

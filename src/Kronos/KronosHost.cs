@@ -19,18 +19,31 @@ namespace Intelli.Kronos
         private readonly INodeWatchdog watchdog;
         private readonly IWorkQueueProvider workQueue;
         private readonly List<NodeWorker> workers;
+        private readonly IMetricsCounter metricsCounter;
         private readonly object syncRoot = new object();
 
         private bool isRunning;
         private CancellationTokenSource cts;
 
         public KronosHost(MongoDatabase db, int workerCount)
+            : this(db, workerCount, null)
         {
+        }
+
+        public KronosHost(MongoDatabase db, int workerCount, IMetricsCounter metricsCounter)
+        {
+            if (metricsCounter == null)
+            {
+                metricsCounter = new NullMetricsCounter();
+            }
+
+            this.metricsCounter = metricsCounter;
+
             MongoConfigurator.Configure();
             var worknodeId = KronosConfig.WorknodeId;
             var storageFactory = new StorageFactory(db);
 
-            var taskManagementService = new KronosTaskService(storageFactory);
+            var taskManagementService = new KronosTaskService(storageFactory, metricsCounter);
 
             var unitOfWorkFactory = new UnitOfWorkFactory(taskManagementService, storageFactory, KronosConfig.ProcessorFactory);
             workQueue = new WorkQueueProvider(worknodeId, storageFactory, unitOfWorkFactory);

@@ -3,6 +3,7 @@ using Intelli.Kronos.Storage;
 using Intelli.Kronos.Tasks;
 using log4net;
 using System;
+using System.Diagnostics;
 using System.Threading;
 
 namespace Intelli.Kronos.Worker
@@ -22,6 +23,8 @@ namespace Intelli.Kronos.Worker
         private CancellationTokenSource cancellationTokenSource;
         private volatile TaskStopReason stopReason;
         private DateTime? timeoutAt;
+
+        protected readonly IMetricsCounter metricsCounter;
 
         public TaskStopReason StopReason
         {
@@ -55,6 +58,7 @@ namespace Intelli.Kronos.Worker
             this.taskService = taskService;
             this.taskStorage = taskStorage;
             this.processorFactory = processorFactory;
+            this.metricsCounter = taskService.MetricsCounter;
         }
 
         protected void ProcessBase(CancellationToken token, long timeout)
@@ -63,10 +67,12 @@ namespace Intelli.Kronos.Worker
             timeoutAt = DateTime.UtcNow.AddMilliseconds(timeout);
 
             var processor = processorFactory.GetProcessorFor(Task);
+            var sw = Stopwatch.StartNew();
 
             try
             {
                 processor.Process(Task, taskService, cancellationTokenSource.Token);
+                metricsCounter.TrackTaskMetrics(Task.GetType().Name, "Processed", sw.ElapsedMilliseconds);
             }
             catch (OperationCanceledException ex)
             {
@@ -75,6 +81,12 @@ namespace Intelli.Kronos.Worker
                     throw new TimeoutException("Task execution timeout", ex);
                 }
 
+                metricsCounter.TrackTaskMetrics(Task.GetType().Name, "ExecutionTimeout", sw.ElapsedMilliseconds);
+                throw;
+            }
+            catch
+            {
+                metricsCounter.TrackTaskMetrics(Task.GetType().Name, "Crashed", sw.ElapsedMilliseconds);
                 throw;
             }
 
