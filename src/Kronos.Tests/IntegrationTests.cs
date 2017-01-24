@@ -38,7 +38,7 @@ namespace Kronos.Tests
             db.DropCollection(KronosConfig.ScheduledTasksCollection);
 
             host = new KronosHost(db, 1);            
-            taskService = new KronosTaskService(new StorageFactory(db));
+            taskService = new KronosTaskService(new StorageFactory(db), new NullMetricsCounter());
             host.Start();
         }
 
