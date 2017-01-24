@@ -16,7 +16,7 @@ namespace Kronos.TestApp
             var db = mongoClient.GetServer().GetDatabase(new MongoUrl(mongoUri).DatabaseName);
             KronosConfig.CappedCollectionSize = 20 * 1024 * 1024;
 
-            var taskService = new KronosTaskService(db, new NullMetricsCounter());
+            var taskService = new KronosTaskService(db);
             taskService.CancelAllByDiscriminator("ConsoleWriterTask");
 
             //var id = taskService.ScheduleTask(new ConsoleWriterTask { Text = "Hello, world!" }, DateTime.UtcNow, TimeSpan.FromSeconds(5), "TestTask");

@@ -16,14 +16,14 @@ namespace Intelli.Kronos
             get { return metricsCounter; }
         }
 
-        public KronosTaskService(MongoDatabase db, IMetricsCounter metricsCounter)
+        public KronosTaskService(MongoDatabase db, IMetricsCounter metricsCounter = null)
             : this(new StorageFactory(db), metricsCounter)
         {
         }
 
-        public KronosTaskService(IStorageFactory storageFactory, IMetricsCounter metricsCounter)
+        public KronosTaskService(IStorageFactory storageFactory, IMetricsCounter metricsCounter = null)
         {
-            this.metricsCounter = metricsCounter;
+            this.metricsCounter = metricsCounter ?? new NullMetricsCounter();
             tasksStorage = storageFactory.GetTasksStorage();
             scheduledTasksStorage = storageFactory.GetScheduledTasksStorage();
         }
