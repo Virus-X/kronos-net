@@ -17,7 +17,7 @@ namespace Intelli.Kronos.Storage
         private readonly ITasksStorage tasksStorage;
         private readonly IScheduledTasksStorage scheduledTasksStorage;
 
-        public StorageFactory(MongoDatabase db)
+        public StorageFactory(IMongoDatabase db)
         {
             failedTasksStorage = new FailedTasksStorage(db);
             nodeStateStorage = new NodeStateStorage(db);

@@ -1,9 +1,9 @@
-﻿using Intelli.Kronos.Storage;
-using Intelli.Kronos.Worker;
-using MongoDB.Driver;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading;
+using Intelli.Kronos.Storage;
+using Intelli.Kronos.Worker;
+using MongoDB.Driver;
 
 namespace Intelli.Kronos
 {
@@ -25,12 +25,12 @@ namespace Intelli.Kronos
         private bool isRunning;
         private CancellationTokenSource cts;
 
-        public KronosHost(MongoDatabase db, int workerCount)
+        public KronosHost(IMongoDatabase db, int workerCount)
             : this(db, workerCount, null)
         {
         }
 
-        public KronosHost(MongoDatabase db, int workerCount, IMetricsCounter metricsCounter)
+        public KronosHost(IMongoDatabase db, int workerCount, IMetricsCounter metricsCounter)
         {
             if (metricsCounter == null)
             {

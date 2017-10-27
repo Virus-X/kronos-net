@@ -5,7 +5,6 @@ using Intelli.Kronos.Tasks;
 using log4net;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using MongoDB.Driver.Builders;
 
 namespace Intelli.Kronos.Storage
 {
@@ -33,82 +32,93 @@ namespace Intelli.Kronos.Storage
     public class TasksStorage : ITasksStorage
     {
         private static readonly ILog Log = LogManager.GetLogger(typeof(TasksStorage));
-        private readonly MongoCollection<KronosTask> tasksCollection;
+        private readonly IMongoCollection<KronosTask> tasksCollection;
         private readonly HashSet<string> unknownTypes;
 
-        public TasksStorage(MongoDatabase db)
+        public TasksStorage(IMongoDatabase db)
         {
-            if (!db.CollectionExists(KronosConfig.TasksCollection))
-            {
-                var opts = new CollectionOptionsBuilder();
-                if (KronosConfig.UseCappedCollection)
-                {
-                    opts.SetCapped(KronosConfig.UseCappedCollection);
-                    opts.SetMaxSize(KronosConfig.CappedCollectionSize);
-                }
+            //if (!db.CollectionExists(KronosConfig.TasksCollection))
+            //{
+            //    var opts = new CollectionOptionsBuilder();
+            //    if (KronosConfig.UseCappedCollection)
+            //    {
+            //        opts.SetCapped(KronosConfig.UseCappedCollection);
+            //        opts.SetMaxSize(KronosConfig.CappedCollectionSize);
+            //    }
 
-                db.CreateCollection(KronosConfig.TasksCollection, opts);
-                tasksCollection = db.GetCollection<KronosTask>(KronosConfig.TasksCollection);                ;
-            }
-            else
+            //    db.CreateCollection(KronosConfig.TasksCollection, opts);
+            //    tasksCollection = db.GetCollection<KronosTask>(KronosConfig.TasksCollection);
+            //}
+            //else
+            //{
+
+            // TODO Capped collection is a great way here, but there are issues with updates
+            // We should solve them first
+            tasksCollection = db.GetCollection<KronosTask>(KronosConfig.TasksCollection);
+            //}
+
+            try
             {
-                tasksCollection = db.GetCollection<KronosTask>(KronosConfig.TasksCollection);
+                tasksCollection.Indexes.CreateOne(
+                    Builders<KronosTask>.IndexKeys.Ascending(x => x.State)
+                        .Ascending(x => x.Priority));
+            }
+            catch
+            {
+                // Ok, indexes exist already
             }
 
-            tasksCollection.CreateIndex(IndexKeys<KronosTask>
-                .Ascending(x => x.State)
-                .Ascending(x => x.Priority));
             unknownTypes = new HashSet<string>();
         }
 
         public string Add(KronosTask task)
         {
-            tasksCollection.Insert(task);
+            tasksCollection.InsertOne(task);
             return task.Id;
         }
 
         public void Add(IEnumerable<KronosTask> tasks)
         {
-            tasksCollection.InsertBatch(tasks);
+            tasksCollection.InsertMany(tasks);
         }
 
         public KronosTask AllocateNext(ObjectId worknodeId)
         {
-            var q = Query.And(Query<KronosTask>.EQ(x => x.State, TaskState.Pending));
+            var q = Builders<KronosTask>.Filter.Eq(x => x.State, TaskState.Pending);
 
             if (unknownTypes.Count > 0)
             {
                 // Ensuring that we won't receive unknown tasks for this node.
                 // Performance drops here, so generally, user should ensure that all tasks would be known to node.
-                q = Query.And(q, Query.NotIn("_t", unknownTypes.Select(BsonValue.Create)));
+
+                q = Builders<KronosTask>.Filter.And(q, Builders<KronosTask>.Filter.Not(
+                    Builders<KronosTask>.Filter.In("_t", unknownTypes.Select(BsonValue.Create))));
             }
 
-            var upd = Update<KronosTask>
+            var upd = Builders<KronosTask>.Update
                 .Set(x => x.State, TaskState.Running)
                 .Set(x => x.Lock, WorkerLock.Create(worknodeId));
 
-            var args = new FindAndModifyArgs
-                           {
-                               Query = q,
-                               Update = upd,
-                               SortBy = SortBy<KronosTask>.Ascending(x => x.Priority),
-                               VersionReturned = FindAndModifyDocumentVersion.Modified
-                           };
+            //try
+            //{
+            return tasksCollection.FindOneAndUpdate(q, upd,
+                new FindOneAndUpdateOptions<KronosTask, KronosTask>
+                {
+                    Sort = Builders<KronosTask>.Sort.Ascending(x => x.Priority),
+                    ReturnDocument = ReturnDocument.After
+                });
 
-            var res = tasksCollection.FindAndModify(args);
-            try
-            {
-                return res.GetModifiedDocumentAs<KronosTask>();
-            }
-            catch (BsonSerializationException ex)
-            {
-                var taskId = res.ModifiedDocument.GetValue("_id").AsObjectId.ToString();
-                Log.ErrorFormat("Failed to deserialize the task {0}: {1}", taskId, ex.Message);
-                var taskType = res.ModifiedDocument.GetValue("_t").AsString;
-                unknownTypes.Add(taskType);
-                ReleaseLock(taskId);
-                return null;
-            }
+            // BUG: unknown entity can break all things
+            //}
+            //catch (BsonSerializationException ex)
+            //{
+            //    var taskId = res.ModifiedDocument.GetValue("_id").AsObjectId.ToString();
+            //    Log.ErrorFormat("Failed to deserialize the task {0}: {1}", taskId, ex.Message);
+            //    var taskType = res.ModifiedDocument.GetValue("_t").AsString;
+            //    unknownTypes.Add(taskType);
+            //    ReleaseLock(taskId);
+            //    return null;
+            //}
         }
 
         public void ReleaseLock(KronosTask task)
@@ -118,23 +128,22 @@ namespace Intelli.Kronos.Storage
 
         public int ReleaseLockedTasks(ObjectId worknodeId)
         {
-            var q = Query.And(
-                Query<KronosTask>.EQ(x => x.State, TaskState.Running),
-                Query<KronosTask>.EQ(x => x.Lock.NodeId, worknodeId));
+            var q = Builders<KronosTask>.Filter.And(
+                Builders<KronosTask>.Filter.Eq(x => x.State, TaskState.Running),
+                Builders<KronosTask>.Filter.Eq(x => x.Lock.NodeId, worknodeId));
 
-            var upd = Update<KronosTask>
+            var upd = Builders<KronosTask>.Update
                 .Set(x => x.State, TaskState.Pending)
                 .Set(x => x.Lock, WorkerLock.None);
 
-            var options = new MongoUpdateOptions { Flags = UpdateFlags.Multi, WriteConcern = WriteConcern.Acknowledged };
-            return (int)tasksCollection.Update(q, upd, options).DocumentsAffected;
+            return (int)tasksCollection.WithWriteConcern(WriteConcern.Acknowledged).UpdateMany(q, upd).ModifiedCount;
         }
 
         public void SetState(string taskId, TaskState newState)
         {
-            var q = Query<KronosTask>.EQ(x => x.Id, taskId);
-            var upd = Update<KronosTask>.Set(x => x.State, newState);
-            tasksCollection.Update(q, upd, WriteConcern.Acknowledged);
+            var q = Builders<KronosTask>.Filter.Eq(x => x.Id, taskId);
+            var upd = Builders<KronosTask>.Update.Set(x => x.State, newState);
+            tasksCollection.WithWriteConcern(WriteConcern.Acknowledged).UpdateOne(q, upd);
         }
 
         public int RemapDiscriminator(string oldDiscriminator, string newDiscriminator)
@@ -144,42 +153,39 @@ namespace Intelli.Kronos.Storage
                 throw new NotSupportedException("Cannot remap discriminators while using capped collection");
             }
 
-            var q = Query.And(
-                Query<KronosTask>.EQ(x => x.State, TaskState.Pending),
-                Query.EQ("_t", oldDiscriminator));
+            var q = Builders<KronosTask>.Filter.And(
+                Builders<KronosTask>.Filter.Eq(x => x.State, TaskState.Pending),
+                Builders<KronosTask>.Filter.Eq("_t", oldDiscriminator));
 
-            var upd = Update.Set("_t", newDiscriminator);
-            var options = new MongoUpdateOptions { Flags = UpdateFlags.Multi, WriteConcern = WriteConcern.Acknowledged };
-            return (int)tasksCollection.Update(q, upd, options).DocumentsAffected;
+            var upd = Builders<KronosTask>.Update.Set("_t", newDiscriminator);
+            return (int)tasksCollection.WithWriteConcern(WriteConcern.Acknowledged).UpdateMany(q, upd).ModifiedCount;
         }
 
         public int CancelAllByDiscriminator(string discriminator)
         {
-            var q = Query.And(
-                Query<KronosTask>.EQ(x => x.State, TaskState.Pending),
-                Query.EQ("_t", discriminator));
+            var q = Builders<KronosTask>.Filter.And(
+                Builders<KronosTask>.Filter.Eq(x => x.State, TaskState.Pending),
+                Builders<KronosTask>.Filter.Eq("_t", discriminator));
 
-            var upd = Update<KronosTask>.Set(x => x.State, TaskState.Canceled);
-            var options = new MongoUpdateOptions { Flags = UpdateFlags.Multi, WriteConcern = WriteConcern.Acknowledged };
-            return (int)tasksCollection.Update(q, upd, options).DocumentsAffected;
+            var upd = Builders<KronosTask>.Update.Set(x => x.State, TaskState.Canceled);
+            return (int)tasksCollection.WithWriteConcern(WriteConcern.Acknowledged).UpdateMany(q, upd).ModifiedCount;
         }
 
         public KronosTask MarkDependencyProcessed(string taskId, string dependencyId)
         {
-            var q = Query.And(Query<KronosTask>.EQ(x => x.Id, taskId),
-                              Query<KronosTask>.EQ(x => x.State, TaskState.WaitingForDependency));
+            var q = Builders<KronosTask>.Filter.And(
+                Builders<KronosTask>.Filter.Eq(x => x.Id, taskId),
+                Builders<KronosTask>.Filter.Eq(x => x.State, TaskState.WaitingForDependency));
 
-            var upd = Update<KronosTask>.Pull(x => x.DependsOn, dependencyId);
-            var options = new FindAndModifyArgs { Query = q, Update = upd, VersionReturned = FindAndModifyDocumentVersion.Modified };
-            var res = tasksCollection.FindAndModify(options).GetModifiedDocumentAs<KronosTask>();
-            return res;
+            var upd = Builders<KronosTask>.Update.Pull(x => x.DependsOn, dependencyId);
+            return tasksCollection.FindOneAndUpdate(q, upd);
         }
 
         private void ReleaseLock(string taskId)
         {
-            var q = Query<KronosTask>.EQ(x => x.Id, taskId);
-            var upd = Update<KronosTask>.Set(x => x.Lock, WorkerLock.None);
-            tasksCollection.Update(q, upd);
+            var q = Builders<KronosTask>.Filter.Eq(x => x.Id, taskId);
+            var upd = Builders<KronosTask>.Update.Set(x => x.Lock, WorkerLock.None);
+            tasksCollection.UpdateOne(q, upd);
         }
     }
 }

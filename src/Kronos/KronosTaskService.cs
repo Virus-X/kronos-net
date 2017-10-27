@@ -1,7 +1,7 @@
-﻿using Intelli.Kronos.Storage;
+﻿using System;
+using Intelli.Kronos.Storage;
 using Intelli.Kronos.Tasks;
 using MongoDB.Driver;
-using System;
 
 namespace Intelli.Kronos
 {
@@ -16,7 +16,7 @@ namespace Intelli.Kronos
             get { return metricsCounter; }
         }
 
-        public KronosTaskService(MongoDatabase db, IMetricsCounter metricsCounter = null)
+        public KronosTaskService(IMongoDatabase db, IMetricsCounter metricsCounter = null)
             : this(new StorageFactory(db), metricsCounter)
         {
         }

@@ -10,16 +10,16 @@ namespace Intelli.Kronos.Storage
 
     public class FailedTasksStorage : IFailedTasksStorage
     {
-        private readonly MongoCollection<FailedTask> failedTasks;
+        private readonly IMongoCollection<FailedTask> failedTasks;
 
-        public FailedTasksStorage(MongoDatabase db)
+        public FailedTasksStorage(IMongoDatabase db)
         {
             failedTasks = db.GetCollection<FailedTask>(KronosConfig.FailedTasksCollection);
         }
 
         public void Add(FailedTask task)
         {
-            failedTasks.Insert(task);
+            failedTasks.InsertOne(task);
         }
     }
 }

@@ -2,10 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Intelli.Kronos.Tasks;
+using log4net;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using MongoDB.Driver.Builders;
-using log4net;
 
 namespace Intelli.Kronos.Storage
 {
@@ -31,65 +30,77 @@ namespace Intelli.Kronos.Storage
     {
         private static readonly ILog Log = LogManager.GetLogger(typeof(ScheduledTasksStorage));
 
-        private readonly MongoCollection<TaskSchedule> taskCollection;
+        private readonly IMongoCollection<TaskSchedule> taskCollection;
         private readonly HashSet<string> unknownTypes;
 
-        public ScheduledTasksStorage(MongoDatabase db)
+        public ScheduledTasksStorage(IMongoDatabase db)
         {
             taskCollection = db.GetCollection<TaskSchedule>(KronosConfig.ScheduledTasksCollection);
-            taskCollection.CreateIndex(
-                IndexKeys<TaskSchedule>.Ascending(x => x.Lock.NodeId).Ascending(x => x.Schedule.RunAt));
+
+            try
+            {
+                taskCollection.Indexes.CreateOne(
+                    Builders<TaskSchedule>.IndexKeys.Ascending(x => x.Lock.NodeId).Ascending(x => x.Schedule.RunAt));
+            }
+            catch
+            {
+                // whatever
+            }
+
             unknownTypes = new HashSet<string>();
         }
 
         public TaskSchedule GetById(string scheduleId)
         {
-            var q = Query<TaskSchedule>.EQ(x => x.Id, scheduleId);
-            return taskCollection.Find(q).FirstOrDefault();
+            return taskCollection.Find(x => x.Id == scheduleId).FirstOrDefault();
         }
 
         public string Save(TaskSchedule taskSchedule)
         {
-            taskCollection.Save(taskSchedule);
+            taskCollection.ReplaceOne(x => x.Id == taskSchedule.Id, taskSchedule);
             return taskSchedule.Id;
         }
 
         public TaskSchedule AllocateNext(ObjectId worknodeId)
         {
-            var q = Query.And(
-                Query<TaskSchedule>.EQ(x => x.Lock.NodeId, ObjectId.Empty),
-                Query<TaskSchedule>.LTE(x => x.Schedule.RunAt, DateTime.UtcNow));
+            var q = Builders<TaskSchedule>.Filter.And(
+                Builders<TaskSchedule>.Filter.Eq(x => x.Lock.NodeId, ObjectId.Empty),
+                Builders<TaskSchedule>.Filter.Lte(x => x.Schedule.RunAt, DateTime.UtcNow));
 
             if (unknownTypes.Count > 0)
             {
                 // Ensuring that we won't receive unknown tasks for this node.
                 // Performance drops here, so generally, user should ensure that all tasks would be known to node.
-                q = Query.And(q, Query.NotIn("Task._t", unknownTypes.Select(BsonValue.Create)));
+                q = Builders<TaskSchedule>.Filter.And(q, Builders<TaskSchedule>.Filter.Not(Builders<TaskSchedule>.Filter.In("Task._t", unknownTypes.Select(BsonValue.Create))));
             }
 
-            var upd = Update<TaskSchedule>.Set(x => x.Lock, WorkerLock.Create(worknodeId));
+            var upd = Builders<TaskSchedule>.Update.Set(x => x.Lock, WorkerLock.Create(worknodeId));
 
-            var res = taskCollection.FindAndModify(new FindAndModifyArgs
-                                                       {
-                                                           Query = q,
-                                                           Update = upd,
-                                                           SortBy = SortBy<TaskSchedule>.Ascending(x => x.Schedule.RunAt),
-                                                           VersionReturned = FindAndModifyDocumentVersion.Modified
-                                                       });
-            try
+            //var res = taskCollection.FindAndModify(new FindAndModifyArgs
+            //{
+            //    Query = q,
+            //    Update = upd,
+            //    SortBy = SortBy<TaskSchedule>.Ascending(x => x.Schedule.RunAt),
+            //    VersionReturned = FindAndModifyDocumentVersion.Modified
+            //});
+            //try
+            //{
+            return taskCollection.FindOneAndUpdate(q, upd, new FindOneAndUpdateOptions<TaskSchedule, TaskSchedule>
             {
-                var task = res.GetModifiedDocumentAs<TaskSchedule>();
-                return task;
-            }
-            catch (Exception ex)
-            {
-                var taskId = res.ModifiedDocument.GetValue("_id").AsString;
-                Log.ErrorFormat("Failed to deserialize the task {0}: {1}", taskId, ex.Message);
-                var taskType = res.ModifiedDocument.GetValue("Task").AsBsonDocument.GetValue("_t").AsString;
-                unknownTypes.Add(taskType);
-                ReleaseLock(taskId);
-                return null;
-            }
+                Sort = Builders<TaskSchedule>.Sort.Ascending(x => x.Schedule.RunAt)
+            });
+            //    var task = res.GetModifiedDocumentAs<TaskSchedule>();
+            //    return task;
+            //}
+            //catch (Exception ex)
+            //{
+            //    var taskId = res.ModifiedDocument.GetValue("_id").AsString;
+            //    Log.ErrorFormat("Failed to deserialize the task {0}: {1}", taskId, ex.Message);
+            //    var taskType = res.ModifiedDocument.GetValue("Task").AsBsonDocument.GetValue("_t").AsString;
+            //    unknownTypes.Add(taskType);
+            //    ReleaseLock(taskId);
+            //    return null;
+            //}
         }
 
         public void ReleaseLock(TaskSchedule taskSchedule)
@@ -99,58 +110,54 @@ namespace Intelli.Kronos.Storage
 
         public int ReleaseAllTasks(ObjectId worknodeId)
         {
-            var q = Query<TaskSchedule>.EQ(x => x.Lock.NodeId, worknodeId);
-            var upd = Update<TaskSchedule>.Set(x => x.Lock, WorkerLock.None);
-            var options = new MongoUpdateOptions { Flags = UpdateFlags.Multi, WriteConcern = WriteConcern.Acknowledged };
-            return (int)taskCollection.Update(q, upd, options).DocumentsAffected;
+            var q = Builders<TaskSchedule>.Filter.Eq(x => x.Lock.NodeId, worknodeId);
+            var upd = Builders<TaskSchedule>.Update.Set(x => x.Lock, WorkerLock.None);
+            return (int)taskCollection.WithWriteConcern(WriteConcern.Acknowledged).UpdateMany(q, upd).ModifiedCount;
         }
 
         public void Remove(string scheduleId)
         {
-            var q = Query.And(Query<TaskSchedule>.EQ(x => x.Id, scheduleId));
-            taskCollection.Remove(q);
+            taskCollection.DeleteOne(x => x.Id == scheduleId);
         }
 
         public void Reschedule(TaskSchedule taskSchedule, Schedule newSchedule)
         {
-            var q = Query.And(Query<TaskSchedule>.EQ(x => x.Id, taskSchedule.Id));
-
             if (newSchedule == null)
             {
-                taskCollection.Remove(q);
+                taskCollection.DeleteOne(x => x.Id == taskSchedule.Id);
             }
             else
             {
-                var upd = Update<TaskSchedule>
+                var upd = Builders<TaskSchedule>.Update
                     .Set(x => x.Lock, WorkerLock.None)
                     .Set(x => x.Schedule, newSchedule);
-                taskCollection.Update(q, upd);
+                taskCollection.UpdateOne(x => x.Id == taskSchedule.Id, upd);
             }
         }
 
         public int RemapDiscriminator(string oldDiscriminator, string newDiscriminator)
         {
-            var q = Query.And(Query<TaskSchedule>.EQ(x => x.Lock.NodeId, ObjectId.Empty),
-                              Query.EQ("Task._t", oldDiscriminator));
+            var q = Builders<TaskSchedule>.Filter.And(
+                Builders<TaskSchedule>.Filter.Eq(x => x.Lock.NodeId, ObjectId.Empty),
+                Builders<TaskSchedule>.Filter.Eq("Task._t", oldDiscriminator));
 
-            var upd = Update.Set("Task._t", newDiscriminator);
-            var options = new MongoUpdateOptions { Flags = UpdateFlags.Multi, WriteConcern = WriteConcern.Acknowledged };
-            return (int)taskCollection.Update(q, upd, options).DocumentsAffected;
+            var upd = Builders<TaskSchedule>.Update.Set("Task._t", newDiscriminator);
+            return (int)taskCollection.WithWriteConcern(WriteConcern.Acknowledged).UpdateMany(q, upd).ModifiedCount;
         }
 
         public int CancelAllByDiscriminator(string discriminator)
         {
-            var q = Query.And(Query<TaskSchedule>.EQ(x => x.Lock.NodeId, ObjectId.Empty),
-                              Query.EQ("_t", discriminator));
+            var q = Builders<TaskSchedule>.Filter.And(
+                Builders<TaskSchedule>.Filter.Eq(x => x.Lock.NodeId, ObjectId.Empty),
+                Builders<TaskSchedule>.Filter.Eq("Task._t", discriminator));
 
-            return (int)taskCollection.Remove(q, RemoveFlags.None, WriteConcern.Acknowledged).DocumentsAffected;
+            return (int)taskCollection.WithWriteConcern(WriteConcern.Acknowledged).DeleteMany(q).DeletedCount;
         }
 
         private void ReleaseLock(string taskId)
         {
-            var q = Query.And(Query<TaskSchedule>.EQ(x => x.Id, taskId));
-            var upd = Update<TaskSchedule>.Set(x => x.Lock, WorkerLock.None);
-            taskCollection.Update(q, upd);
+            taskCollection.UpdateOne(x => x.Id == taskId,
+                Builders<TaskSchedule>.Update.Set(x => x.Lock, WorkerLock.None));
         }
     }
 }

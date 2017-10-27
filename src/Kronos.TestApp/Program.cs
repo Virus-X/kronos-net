@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Configuration;
 using Intelli.Kronos;
-using MongoDB.Driver;
 using log4net.Config;
+using MongoDB.Driver;
 
 namespace Kronos.TestApp
 {
@@ -13,7 +13,7 @@ namespace Kronos.TestApp
             BasicConfigurator.Configure();
             var mongoUri = ConfigurationManager.ConnectionStrings["MongoDB"].ConnectionString;
             var mongoClient = new MongoClient(mongoUri);
-            var db = mongoClient.GetServer().GetDatabase(new MongoUrl(mongoUri).DatabaseName);
+            var db = mongoClient.GetDatabase(new MongoUrl(mongoUri).DatabaseName);
             KronosConfig.CappedCollectionSize = 20 * 1024 * 1024;
 
             var taskService = new KronosTaskService(db);

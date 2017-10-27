@@ -30,7 +30,7 @@ namespace Kronos.Tests
         {
             var mongoUri = ConfigurationManager.ConnectionStrings["MongoDB"].ConnectionString;
             var mongoClient = new MongoClient(mongoUri);
-            var db = mongoClient.GetServer().GetDatabase(new MongoUrl(mongoUri).DatabaseName);
+            var db = mongoClient.GetDatabase(new MongoUrl(mongoUri).DatabaseName);
 
             db.DropCollection(KronosConfig.TasksCollection);
             db.DropCollection(KronosConfig.FailedTasksCollection);
