@@ -178,14 +178,17 @@ namespace Intelli.Kronos.Storage
                 Builders<KronosTask>.Filter.Eq(x => x.State, TaskState.WaitingForDependency));
 
             var upd = Builders<KronosTask>.Update.Pull(x => x.DependsOn, dependencyId);
-            return tasksCollection.FindOneAndUpdate(q, upd);
+            return tasksCollection.FindOneAndUpdate(q, upd, new FindOneAndUpdateOptions<KronosTask>
+            {
+                ReturnDocument = ReturnDocument.After
+            });
         }
 
         private void ReleaseLock(string taskId)
         {
             var q = Builders<KronosTask>.Filter.Eq(x => x.Id, taskId);
             var upd = Builders<KronosTask>.Update.Set(x => x.Lock, WorkerLock.None);
-            tasksCollection.UpdateOne(q, upd);
+            tasksCollection.WithWriteConcern(WriteConcern.Acknowledged).UpdateOne(q, upd);
         }
     }
 }
