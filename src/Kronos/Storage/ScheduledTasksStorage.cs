@@ -57,7 +57,7 @@ namespace Intelli.Kronos.Storage
 
         public string Save(TaskSchedule taskSchedule)
         {
-            taskCollection.ReplaceOne(x => x.Id == taskSchedule.Id, taskSchedule);
+            taskCollection.ReplaceOne(x => x.Id == taskSchedule.Id, taskSchedule, new UpdateOptions { IsUpsert = true });
             return taskSchedule.Id;
         }
 
