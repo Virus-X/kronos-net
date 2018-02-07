@@ -1,4 +1,7 @@
-﻿using FluentAssertions;
+﻿using System;
+using System.Configuration;
+using System.Threading;
+using FluentAssertions;
 using Intelli.Kronos;
 using Intelli.Kronos.Processors;
 using Intelli.Kronos.Storage;
@@ -6,9 +9,6 @@ using Intelli.Kronos.Tasks;
 using log4net.Config;
 using MongoDB.Driver;
 using NUnit.Framework;
-using System;
-using System.Configuration;
-using System.Threading;
 
 namespace Kronos.Tests
 {
@@ -16,7 +16,9 @@ namespace Kronos.Tests
     public class IntegrationTests
     {
         protected static ManualResetEvent processedEvent = new ManualResetEvent(false);
+        protected static volatile int SharedResource = 0;
         private IKronosHost host;
+
         private IKronosTaskService taskService;
 
         [TestFixtureSetUp]
@@ -37,8 +39,9 @@ namespace Kronos.Tests
             db.DropCollection(KronosConfig.NodeStateCollection);
             db.DropCollection(KronosConfig.ScheduledTasksCollection);
 
-            host = new KronosHost(db, 1);            
+            host = new KronosHost(db, 1);
             taskService = new KronosTaskService(new StorageFactory(db), new NullMetricsCounter());
+            processedEvent.Reset();
             host.Start();
         }
 
@@ -52,7 +55,6 @@ namespace Kronos.Tests
         [Test]
         public void RunStubTasks()
         {
-            host.Start();
             taskService.AddTask(new StubTask());
             processedEvent.WaitOne(200000).Should().BeTrue();
         }
@@ -60,10 +62,22 @@ namespace Kronos.Tests
         [Test]
         public void SimulateTaskException()
         {
-            host.Start();
             taskService.AddTask(new StubTask { SimulateCrash = true });
             processedEvent.WaitOne(5000).Should().BeFalse();
-        }        
+        }
+
+        [Test]
+        public void SimulateDagTasks()
+        {
+            SharedResource = 0;
+            var dagBuilder = new DagBuilder();
+            dagBuilder.Task(new DagTaskParent { ExpectedCount = 2 })
+                .DependsOn(new DagTaskChild())
+                .DependsOn(new DagTaskChild());
+
+            taskService.AddDagTasks(dagBuilder);
+            processedEvent.WaitOne(200000).Should().BeTrue();
+        }
 
         [TaskProcessor(typeof(StubTaskProcessor))]
         private class StubTask : KronosTask
@@ -71,6 +85,37 @@ namespace Kronos.Tests
             public bool SimulateCrash { get; set; }
 
             public bool SimulateTimeout { get; set; }
+        }
+
+        [TaskProcessor(typeof(Processor))]
+        private class DagTaskParent : KronosTask
+        {
+            public int ExpectedCount { get; set; }
+
+            public class Processor : KronosTaskProcessor<DagTaskParent>
+            {
+                public override void Process(DagTaskParent task, IKronosTaskService taskService, CancellationToken token)
+                {
+                    if (task.ExpectedCount != SharedResource)
+                    {
+                        throw new InvalidOperationException("Expectation failed");
+                    }
+                    processedEvent.Set();
+                }
+            }
+        }
+
+        [TaskProcessor(typeof(Processor))]
+        private class DagTaskChild : KronosTask
+        {
+
+            public class Processor : KronosTaskProcessor<DagTaskChild>
+            {
+                public override void Process(DagTaskChild task, IKronosTaskService taskService, CancellationToken token)
+                {
+                    SharedResource++;
+                }
+            }
         }
 
         private class StubTaskProcessor : KronosTaskProcessor<StubTask>

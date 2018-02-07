@@ -33,29 +33,29 @@ namespace Intelli.Kronos.Storage
     {
         private static readonly ILog Log = LogManager.GetLogger(typeof(TasksStorage));
         private readonly IMongoCollection<KronosTask> tasksCollection;
-        private readonly HashSet<string> unknownTypes;
+        private readonly HashSet<string> unknownTypes = new HashSet<string>();
 
         public TasksStorage(IMongoDatabase db)
         {
-            //if (!db.CollectionExists(KronosConfig.TasksCollection))
-            //{
-            //    var opts = new CollectionOptionsBuilder();
-            //    if (KronosConfig.UseCappedCollection)
-            //    {
-            //        opts.SetCapped(KronosConfig.UseCappedCollection);
-            //        opts.SetMaxSize(KronosConfig.CappedCollectionSize);
-            //    }
+            var collectionExists = db.ListCollections(new ListCollectionsOptions
+            {
+                Filter = Builders<BsonDocument>.Filter.Eq("name", KronosConfig.TasksCollection)
+            }).Any();
 
-            //    db.CreateCollection(KronosConfig.TasksCollection, opts);
-            //    tasksCollection = db.GetCollection<KronosTask>(KronosConfig.TasksCollection);
-            //}
-            //else
-            //{
+            if (!collectionExists)
+            {
+                var opts = new CreateCollectionOptions();
+                if (KronosConfig.UseCappedCollection)
+                {
+                    opts.Capped = true;
+                    opts.MaxDocuments = KronosConfig.CappedCollectionCount;
+                    opts.MaxSize = KronosConfig.CappedCollectionSize;
+                }
 
-            // TODO Capped collection is a great way here, but there are issues with updates
-            // We should solve them first
+                db.CreateCollection(KronosConfig.TasksCollection, opts);
+            }
+
             tasksCollection = db.GetCollection<KronosTask>(KronosConfig.TasksCollection);
-            //}
 
             try
             {
@@ -67,8 +67,6 @@ namespace Intelli.Kronos.Storage
             {
                 // Ok, indexes exist already
             }
-
-            unknownTypes = new HashSet<string>();
         }
 
         public string Add(KronosTask task)
@@ -102,11 +100,11 @@ namespace Intelli.Kronos.Storage
             //try
             //{
             return tasksCollection.FindOneAndUpdate(q, upd,
-                new FindOneAndUpdateOptions<KronosTask, KronosTask>
-                {
-                    Sort = Builders<KronosTask>.Sort.Ascending(x => x.Priority),
-                    ReturnDocument = ReturnDocument.After
-                });
+            new FindOneAndUpdateOptions<KronosTask, KronosTask>
+            {
+                Sort = Builders<KronosTask>.Sort.Ascending(x => x.Priority),
+                ReturnDocument = ReturnDocument.After
+            });
 
             // BUG: unknown entity can break all things
             //}

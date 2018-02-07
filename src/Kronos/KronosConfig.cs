@@ -24,6 +24,7 @@ namespace Intelli.Kronos
 
         public static bool UseCappedCollection = true;
         public static long CappedCollectionSize = 1024 * 1024 * 1024; // 1GB
+        public static long CappedCollectionCount = 200000; //~ 200MB @ 1KB/task
 
         /// <summary>
         /// Unique id for each node process. Generated on node start.
