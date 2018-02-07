@@ -1,12 +1,15 @@
 using System;
 using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
 
 namespace Intelli.Kronos.Tasks
 {
     public class WorkerLock
     {
+        [BsonElement("n")]
         public ObjectId NodeId { get; set; }
 
+        [BsonElement("t")]
         public DateTime Timeout { get; set; }
 
         public static WorkerLock None

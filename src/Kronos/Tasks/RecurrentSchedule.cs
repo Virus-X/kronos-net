@@ -1,4 +1,5 @@
 using System;
+using MongoDB.Bson.Serialization.Attributes;
 
 namespace Intelli.Kronos.Tasks
 {
@@ -6,6 +7,7 @@ namespace Intelli.Kronos.Tasks
     {
         private TimeSpan interval;
 
+        [BsonElement("int")]
         public TimeSpan Interval
         {
             get { return interval; }

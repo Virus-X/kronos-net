@@ -11,10 +11,13 @@ namespace Intelli.Kronos.Tasks
 
         public string Id { get; set; }
 
+        [BsonElement("t")]
         public KronosTask Task { get; protected set; }
 
+        [BsonElement("lk")]
         public WorkerLock Lock { get; private set; }
 
+        [BsonElement("sc")]
         public Schedule Schedule
         {
             get { return schedule; }

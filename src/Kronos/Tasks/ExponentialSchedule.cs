@@ -1,11 +1,14 @@
 using System;
+using MongoDB.Bson.Serialization.Attributes;
 
 namespace Intelli.Kronos.Tasks
 {
     public class ExponentialSchedule : Schedule
     {
+        [BsonElement("mp")]
         public double Multiplier { get; set; }
 
+        [BsonElement("int")]
         public TimeSpan Interval { get; set; }
 
         public ExponentialSchedule()

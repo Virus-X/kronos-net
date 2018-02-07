@@ -71,7 +71,7 @@ namespace Intelli.Kronos.Storage
             {
                 // Ensuring that we won't receive unknown tasks for this node.
                 // Performance drops here, so generally, user should ensure that all tasks would be known to node.
-                q = Builders<TaskSchedule>.Filter.And(q, Builders<TaskSchedule>.Filter.Not(Builders<TaskSchedule>.Filter.In("Task._t", unknownTypes.Select(BsonValue.Create))));
+                q = Builders<TaskSchedule>.Filter.And(q, Builders<TaskSchedule>.Filter.Not(Builders<TaskSchedule>.Filter.In("t._t", unknownTypes.Select(BsonValue.Create))));
             }
 
             var upd = Builders<TaskSchedule>.Update.Set(x => x.Lock, WorkerLock.Create(worknodeId));
@@ -139,9 +139,9 @@ namespace Intelli.Kronos.Storage
         {
             var q = Builders<TaskSchedule>.Filter.And(
                 Builders<TaskSchedule>.Filter.Eq(x => x.Lock.NodeId, ObjectId.Empty),
-                Builders<TaskSchedule>.Filter.Eq("Task._t", oldDiscriminator));
+                Builders<TaskSchedule>.Filter.Eq("t._t", oldDiscriminator));
 
-            var upd = Builders<TaskSchedule>.Update.Set("Task._t", newDiscriminator);
+            var upd = Builders<TaskSchedule>.Update.Set("t._t", newDiscriminator);
             return (int)taskCollection.WithWriteConcern(WriteConcern.Acknowledged).UpdateMany(q, upd).ModifiedCount;
         }
 
@@ -149,7 +149,7 @@ namespace Intelli.Kronos.Storage
         {
             var q = Builders<TaskSchedule>.Filter.And(
                 Builders<TaskSchedule>.Filter.Eq(x => x.Lock.NodeId, ObjectId.Empty),
-                Builders<TaskSchedule>.Filter.Eq("Task._t", discriminator));
+                Builders<TaskSchedule>.Filter.Eq("t._t", discriminator));
 
             return (int)taskCollection.WithWriteConcern(WriteConcern.Acknowledged).DeleteMany(q).DeletedCount;
         }
