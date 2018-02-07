@@ -70,6 +70,7 @@
   <ItemGroup>
     <Compile Include="DagBuilderTests.cs" />
     <Compile Include="FakeTask.cs" />
+    <Compile Include="CappedCollectionTest.cs" />
     <Compile Include="IntegrationTests.cs" />
     <Compile Include="MiscTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
