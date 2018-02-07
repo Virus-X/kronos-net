@@ -40,7 +40,7 @@ namespace Intelli.Kronos
                 if (node.Dependencies.Any())
                 {
                     task.SetWaitingState();
-                    task.DependsOn = node.Dependencies.Select(x => x.Task.Id).ToList();
+                    task.DependsOn = node.Dependencies.Select(x => x.Task.Id).ToDictionary(x => x, x => false);
                     foreach (var dep in node.Dependencies)
                     {
                         if (dep.Task.ChildTasks == null)
