@@ -24,11 +24,11 @@ namespace Kronos.Tests
 
             taskA.ChildTasks.Count.Should().Be(1);
             taskA.ChildTasks.Should().Contain(taskB.Id);
-            taskA.DependsOn.Should().BeNullOrEmpty();
+            taskA.DependsOn.Should().BeNull();
 
             taskB.ChildTasks.Should().BeNullOrEmpty();
             taskB.DependsOn.Count.Should().Be(1);
-            taskB.DependsOn.Should().Contain(taskA.Id);
+            taskB.DependsOn.Should().ContainKey(taskA.Id);
         }
 
         [Test]

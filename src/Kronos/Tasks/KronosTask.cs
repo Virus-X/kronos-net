@@ -37,7 +37,7 @@ namespace Intelli.Kronos.Tasks
         /// Gets or sets the list of tasks that should be completed before executing this one.        
         /// </summary>
         [BsonIgnoreIfNull]
-        public List<string> DependsOn { get; set; }
+        public Dictionary<string, bool> DependsOn { get; set; }
 
         /// <summary>
         /// Gets or sets the list of tasks, which are waiting for this task to complete
@@ -47,7 +47,7 @@ namespace Intelli.Kronos.Tasks
 
         public bool HasDependencies
         {
-            get { return DependsOn != null && DependsOn.Count > 0; }
+            get { return DependsOn != null && DependsOn.Any(x => !x.Value); }
         }
 
         protected KronosTask()

@@ -177,7 +177,7 @@ namespace Intelli.Kronos.Storage
                 Builders<KronosTask>.Filter.Eq(x => x.Id, taskId),
                 Builders<KronosTask>.Filter.Eq(x => x.State, TaskState.WaitingForDependency));
 
-            var upd = Builders<KronosTask>.Update.Pull(x => x.DependsOn, dependencyId);
+            var upd = Builders<KronosTask>.Update.Set("dep." + dependencyId, true);
             return tasksCollection.FindOneAndUpdate(q, upd, new FindOneAndUpdateOptions<KronosTask>
             {
                 ReturnDocument = ReturnDocument.After
